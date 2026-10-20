@@ -45,15 +45,21 @@ type Result struct {
 }
 
 type Service struct {
-	sourceDir string
-	outDir    string
-	settings  *settings.Store
-	audit     *store.AuditStore
-	logger    *slog.Logger
+	envSourceDir string
+	dataDir      string
+	settings     *settings.Store
+	audit        *store.AuditStore
+	logger       *slog.Logger
 
 	mu      sync.Mutex
 	running bool
 	cron    *cron.Cron
+
+	candMu        sync.Mutex
+	outCands      []PathCandidate
+	outCandsAt    time.Time
+	sourceCands   []PathCandidate
+	sourceCandsAt time.Time
 }
 
 func New(sourceDir, dataDir string, settingsStore *settings.Store, audit *store.AuditStore, logger *slog.Logger) *Service {
@@ -61,33 +67,88 @@ func New(sourceDir, dataDir string, settingsStore *settings.Store, audit *store.
 		sourceDir = DefaultSourceDir
 	}
 	return &Service{
-		sourceDir: filepath.Clean(sourceDir),
-		outDir:    filepath.Join(dataDir, "casaos-apps-backups"),
-		settings:  settingsStore,
-		audit:     audit,
-		logger:    logger,
+		envSourceDir: filepath.Clean(sourceDir),
+		dataDir:      filepath.Clean(dataDir),
+		settings:     settingsStore,
+		audit:        audit,
+		logger:       logger,
 	}
 }
 
-func (s *Service) SourceDir() string { return s.sourceDir }
+func (s *Service) SourceDir() string {
+	path, _, _ := ResolveSourceDir(s.settings.Get(settings.KeyComposeBackupSourceDir), s.envSourceDir)
+	return path
+}
+
+func (s *Service) OutDir() string {
+	path, err := ResolveOutDir(s.settings.Get(settings.KeyComposeBackupOutDir), s.dataDir)
+	if err != nil {
+		return DefaultOutDir(s.dataDir)
+	}
+	return path
+}
 
 func (s *Service) Status() map[string]any {
-	return map[string]any{
-		"enabled":          s.settings.GetBool(settings.KeyComposeBackupEnabled),
-		"source_dir":       s.sourceDir,
-		"source_available": s.sourceAvailable(),
-		"cron":             s.cronExpr(),
-		"keep":             s.keepCount(),
-		"last_ok_at":       nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastOK)),
-		"last_error":       nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastError)),
-		"last_archive":     nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastFile)),
-		"last_app_count":   s.settings.GetInt(settings.KeyComposeBackupLastApps, 0),
-		"archives":         s.listArchives(8),
+	sourceDir, sourceAuto, _ := ResolveSourceDir(s.settings.Get(settings.KeyComposeBackupSourceDir), s.envSourceDir)
+	outDir, outErr := ResolveOutDir(s.settings.Get(settings.KeyComposeBackupOutDir), s.dataDir)
+	if outErr != nil {
+		outDir = DefaultOutDir(s.dataDir)
 	}
+	return map[string]any{
+		"enabled":           s.settings.GetBool(settings.KeyComposeBackupEnabled),
+		"source_dir":        sourceDir,
+		"source_configured": strings.TrimSpace(s.settings.Get(settings.KeyComposeBackupSourceDir)),
+		"source_auto":       sourceAuto,
+		"source_available":  dirExists(sourceDir),
+		"source_candidates": s.cachedSourceCandidates(),
+		"out_dir":           outDir,
+		"out_configured":    strings.TrimSpace(s.settings.Get(settings.KeyComposeBackupOutDir)),
+		"out_candidates":    s.cachedOutCandidates(),
+		"cron":              s.cronExpr(),
+		"keep":              s.keepCount(),
+		"last_ok_at":        nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastOK)),
+		"last_error":        nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastError)),
+		"last_archive":      nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastFile)),
+		"last_app_count":    s.settings.GetInt(settings.KeyComposeBackupLastApps, 0),
+		"archives":          s.listArchives(outDir, 8),
+	}
+}
+
+func (s *Service) cachedSourceCandidates() []PathCandidate {
+	const ttl = 30 * time.Second
+	s.candMu.Lock()
+	defer s.candMu.Unlock()
+	if time.Since(s.sourceCandsAt) < ttl && s.sourceCands != nil {
+		return s.sourceCands
+	}
+	s.sourceCands = DetectSourceCandidates(s.envSourceDir)
+	s.sourceCandsAt = time.Now()
+	return s.sourceCands
+}
+
+func (s *Service) cachedOutCandidates() []PathCandidate {
+	const ttl = 30 * time.Second
+	s.candMu.Lock()
+	defer s.candMu.Unlock()
+	if time.Since(s.outCandsAt) < ttl && s.outCands != nil {
+		return s.outCands
+	}
+	s.outCands = DetectStorageCandidates(s.dataDir)
+	s.outCandsAt = time.Now()
+	return s.outCands
+}
+
+func (s *Service) InvalidatePathCache() {
+	s.candMu.Lock()
+	defer s.candMu.Unlock()
+	s.sourceCands = nil
+	s.outCands = nil
+	s.sourceCandsAt = time.Time{}
+	s.outCandsAt = time.Time{}
 }
 
 func (s *Service) Start(ctx context.Context) error {
-	_ = os.MkdirAll(s.outDir, 0o750)
+	_ = os.MkdirAll(s.OutDir(), 0o750)
 	return s.Reload(ctx)
 }
 
@@ -152,12 +213,18 @@ func (s *Service) Run(ctx context.Context) (*Result, error) {
 		s.mu.Unlock()
 	}()
 
-	if !s.sourceAvailable() {
+	sourceDir := s.SourceDir()
+	if !dirExists(sourceDir) {
 		_ = s.settings.Set(ctx, settings.KeyComposeBackupLastError, ErrSourceMissing.Error())
 		return nil, ErrSourceMissing
 	}
+	outDir, err := ResolveOutDir(s.settings.Get(settings.KeyComposeBackupOutDir), s.dataDir)
+	if err != nil {
+		_ = s.settings.Set(ctx, settings.KeyComposeBackupLastError, err.Error())
+		return nil, err
+	}
 
-	res, err := s.createArchive(ctx)
+	res, err := s.createArchive(ctx, sourceDir, outDir)
 	if err != nil {
 		_ = s.settings.Set(ctx, settings.KeyComposeBackupLastError, err.Error())
 		_ = s.audit.Add(ctx, "error", "compose_backup", "casaos apps backup failed", map[string]any{"error": err.Error()})
@@ -169,25 +236,26 @@ func (s *Service) Run(ctx context.Context) (*Result, error) {
 		settings.KeyComposeBackupLastFile:  filepath.Base(res.ArchivePath),
 		settings.KeyComposeBackupLastApps:  strconv.Itoa(res.AppCount),
 	})
-	_ = s.prune(s.keepCount())
+	_ = s.prune(outDir, s.keepCount())
 	_ = s.audit.Add(ctx, "info", "compose_backup", "casaos apps backup created", map[string]any{
 		"archive": filepath.Base(res.ArchivePath),
 		"apps":    res.AppCount,
 		"files":   res.FileCount,
 		"bytes":   res.Bytes,
+		"out_dir": outDir,
 	})
 	return res, nil
 }
 
-func (s *Service) createArchive(ctx context.Context) (*Result, error) {
+func (s *Service) createArchive(ctx context.Context, sourceDir, outDir string) (*Result, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(s.outDir, 0o750); err != nil {
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		return nil, err
 	}
 	now := time.Now().UTC()
-	outPath := filepath.Join(s.outDir, fmt.Sprintf("%s%s.tar.gz", archivePrefix, now.Format("20060102-150405")))
+	outPath := filepath.Join(outDir, fmt.Sprintf("%s%s.tar.gz", archivePrefix, now.Format("20060102-150405")))
 	tmpPath := outPath + ".partial"
 
 	f, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
@@ -200,7 +268,7 @@ func (s *Service) createArchive(ctx context.Context) (*Result, error) {
 	appCount := 0
 	fileCount := 0
 
-	entries, err := os.ReadDir(s.sourceDir)
+	entries, err := os.ReadDir(sourceDir)
 	if err != nil {
 		cleanupWriters(tw, gz, f, tmpPath)
 		return nil, err
@@ -217,7 +285,7 @@ func (s *Service) createArchive(ctx context.Context) (*Result, error) {
 		if !safeAppName(appName) {
 			continue
 		}
-		added, err := addAppComposeFiles(tw, filepath.Join(s.sourceDir, appName), appName)
+		added, err := addAppComposeFiles(tw, filepath.Join(sourceDir, appName), appName)
 		if err != nil {
 			cleanupWriters(tw, gz, f, tmpPath)
 			return nil, err
@@ -336,8 +404,8 @@ func cleanupWriters(tw *tar.Writer, gz *gzip.Writer, f *os.File, tmpPath string)
 	_ = os.Remove(tmpPath)
 }
 
-func (s *Service) sourceAvailable() bool {
-	st, err := os.Stat(s.sourceDir)
+func dirExists(path string) bool {
+	st, err := os.Stat(path)
 	return err == nil && st.IsDir()
 }
 
@@ -360,8 +428,8 @@ func (s *Service) keepCount() int {
 	return n
 }
 
-func (s *Service) prune(keep int) error {
-	entries, err := os.ReadDir(s.outDir)
+func (s *Service) prune(outDir string, keep int) error {
+	entries, err := os.ReadDir(outDir)
 	if err != nil {
 		return err
 	}
@@ -377,13 +445,13 @@ func (s *Service) prune(keep int) error {
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(names)))
 	for i := keep; i < len(names); i++ {
-		_ = os.Remove(filepath.Join(s.outDir, names[i]))
+		_ = os.Remove(filepath.Join(outDir, names[i]))
 	}
 	return nil
 }
 
-func (s *Service) listArchives(limit int) []map[string]any {
-	entries, err := os.ReadDir(s.outDir)
+func (s *Service) listArchives(outDir string, limit int) []map[string]any {
+	entries, err := os.ReadDir(outDir)
 	if err != nil {
 		return nil
 	}
@@ -403,7 +471,7 @@ func (s *Service) listArchives(limit int) []map[string]any {
 	}
 	out := make([]map[string]any, 0, len(names))
 	for _, n := range names {
-		info, err := os.Stat(filepath.Join(s.outDir, n))
+		info, err := os.Stat(filepath.Join(outDir, n))
 		item := map[string]any{"name": n}
 		if err == nil {
 			item["bytes"] = info.Size()

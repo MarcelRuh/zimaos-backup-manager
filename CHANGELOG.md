@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Compose-Backup: Quellpfad automatisch erkennen oder in den Einstellungen wählen
+- Compose-Backup: Speicherpfad der Archive wählbar (Standard `/data/casaos-apps-backups`, optional Mounts unter `/host`, `/mnt`, …)
+
 ## 0.1.5
 
 - Optional CasaOS compose backup: archives `docker-compose.yml` from `/var/lib/casaos/apps` into `/data/casaos-apps-backups`

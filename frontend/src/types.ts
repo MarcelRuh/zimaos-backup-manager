@@ -85,16 +85,33 @@ export type Settings = {
   compose_backup_enabled: boolean;
   compose_backup_cron: string;
   compose_backup_keep: number;
+  compose_backup_source_dir?: string;
+  compose_backup_out_dir?: string;
   compose_backup_last_ok?: string;
   compose_backup_last_error?: string;
   compose_backup_last_file?: string;
   compose_backup_last_apps?: number;
 };
 
+export type PathCandidate = {
+  path: string;
+  available: boolean;
+  app_count?: number;
+  writable?: boolean;
+  recommended?: boolean;
+  label?: string;
+};
+
 export type ComposeBackupStatus = {
   enabled: boolean;
   source_dir: string;
+  source_configured?: string;
+  source_auto: boolean;
   source_available: boolean;
+  source_candidates?: PathCandidate[];
+  out_dir: string;
+  out_configured?: string;
+  out_candidates?: PathCandidate[];
   cron: string;
   keep: number;
   last_ok_at?: string | null;

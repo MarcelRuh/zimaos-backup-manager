@@ -2,7 +2,7 @@ name: zimaos-backup-manager
 
 services:
   zimaos-backup-manager:
-    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.5
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.6
     container_name: zimaos-backup-manager
     restart: unless-stopped
     ports:
@@ -56,7 +56,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "0.1.5"
+  version: "0.1.6"
   tips:
     before_install:
       en_US: |

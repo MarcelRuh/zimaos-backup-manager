@@ -83,6 +83,8 @@ export function SettingsPage({
         compose_backup_enabled: settings.compose_backup_enabled,
         compose_backup_cron: settings.compose_backup_cron || "0 3 * * *",
         compose_backup_keep: settings.compose_backup_keep || 14,
+        compose_backup_source_dir: settings.compose_backup_source_dir ?? "",
+        compose_backup_out_dir: settings.compose_backup_out_dir ?? "",
       };
       if (token) body.zimaos_api_token = token;
       if (zimaPassword) body.zimaos_password = zimaPassword;
@@ -267,12 +269,126 @@ export function SettingsPage({
               onChange={(e) => setSettings({ ...settings, compose_backup_keep: Number(e.target.value) })}
             />
           </div>
+          <div className="md:col-span-2">
+            <Label>{t("settings.composeBackupSource")}</Label>
+            {(() => {
+              const sourceOpts = (composeStatus?.source_candidates || []).filter((c) => c.available);
+              const configured = settings.compose_backup_source_dir || "";
+              const sourceSelectValue = !configured
+                ? ""
+                : sourceOpts.some((c) => c.path === configured)
+                  ? configured
+                  : "__custom__";
+              return (
+                <>
+                  <Select
+                    value={sourceSelectValue}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setSettings({ ...settings, compose_backup_source_dir: "" });
+                        return;
+                      }
+                      if (v === "__custom__") {
+                        setSettings({
+                          ...settings,
+                          compose_backup_source_dir:
+                            configured || composeStatus?.source_dir || "/host/casaos/apps",
+                        });
+                        return;
+                      }
+                      setSettings({ ...settings, compose_backup_source_dir: v });
+                    }}
+                  >
+                    <option value="">{t("settings.composeBackupSourceAuto")}</option>
+                    {sourceOpts.map((c) => (
+                      <option key={c.path} value={c.path}>
+                        {c.path}
+                        {c.app_count ? ` · ${t("settings.composeBackupAppsFound", { count: c.app_count })}` : ""}
+                        {c.recommended ? " ★" : ""}
+                      </option>
+                    ))}
+                    <option value="__custom__">{t("settings.composeBackupSourceCustom")}</option>
+                  </Select>
+                  {sourceSelectValue === "__custom__" ? (
+                    <Input
+                      className="mt-2 font-mono text-xs"
+                      value={configured}
+                      onChange={(e) => setSettings({ ...settings, compose_backup_source_dir: e.target.value })}
+                      placeholder="/host/casaos/apps"
+                    />
+                  ) : null}
+                </>
+              );
+            })()}
+          </div>
+          <div className="md:col-span-2">
+            <Label>{t("settings.composeBackupOut")}</Label>
+            {(() => {
+              const defaultOut = composeStatus?.out_dir || "/data/casaos-apps-backups";
+              const outOpts = (composeStatus?.out_candidates || []).filter(
+                (c) => c.available && c.writable && c.label !== "default",
+              );
+              const configured = settings.compose_backup_out_dir || "";
+              const outSelectValue = !configured
+                ? ""
+                : outOpts.some((c) => c.path === configured)
+                  ? configured
+                  : "__custom__";
+              return (
+                <>
+                  <Select
+                    value={outSelectValue}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setSettings({ ...settings, compose_backup_out_dir: "" });
+                        return;
+                      }
+                      if (v === "__custom__") {
+                        setSettings({
+                          ...settings,
+                          compose_backup_out_dir: configured || defaultOut,
+                        });
+                        return;
+                      }
+                      setSettings({ ...settings, compose_backup_out_dir: v });
+                    }}
+                  >
+                    <option value="">{t("settings.composeBackupOutDefault")}</option>
+                    {outOpts.map((c) => (
+                      <option key={c.path} value={c.path}>
+                        {c.path}
+                        {c.recommended ? " ★" : ""}
+                      </option>
+                    ))}
+                    <option value="__custom__">{t("settings.composeBackupOutCustom")}</option>
+                  </Select>
+                  {outSelectValue === "__custom__" ? (
+                    <Input
+                      className="mt-2 font-mono text-xs"
+                      value={configured}
+                      onChange={(e) => setSettings({ ...settings, compose_backup_out_dir: e.target.value })}
+                      placeholder="/data/casaos-apps-backups"
+                    />
+                  ) : null}
+                </>
+              );
+            })()}
+          </div>
         </div>
         {composeStatus && (
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--color-muted)]">{t("settings.composeBackupSource")}</dt>
-              <dd className="truncate font-mono text-xs">{composeStatus.source_dir}</dd>
+              <dd className="truncate font-mono text-xs">
+                {composeStatus.source_dir}
+                {composeStatus.source_auto ? ` · ${t("settings.composeBackupSourceAuto")}` : ""}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-[var(--color-muted)]">{t("settings.composeBackupOut")}</dt>
+              <dd className="truncate font-mono text-xs">{composeStatus.out_dir}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--color-muted)]">Status</dt>

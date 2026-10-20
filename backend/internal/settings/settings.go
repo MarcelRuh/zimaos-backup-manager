@@ -27,13 +27,15 @@ const (
 	KeyDiscordNotifyFail = "discord_notify_failure"
 	KeySetupCompleted    = "setup_completed"
 
-	KeyComposeBackupEnabled  = "compose_backup_enabled"
-	KeyComposeBackupCron     = "compose_backup_cron"
-	KeyComposeBackupKeep     = "compose_backup_keep"
-	KeyComposeBackupLastOK   = "compose_backup_last_ok"
+	KeyComposeBackupEnabled   = "compose_backup_enabled"
+	KeyComposeBackupCron      = "compose_backup_cron"
+	KeyComposeBackupKeep      = "compose_backup_keep"
+	KeyComposeBackupSourceDir = "compose_backup_source_dir"
+	KeyComposeBackupOutDir    = "compose_backup_out_dir"
+	KeyComposeBackupLastOK    = "compose_backup_last_ok"
 	KeyComposeBackupLastError = "compose_backup_last_error"
-	KeyComposeBackupLastFile = "compose_backup_last_file"
-	KeyComposeBackupLastApps = "compose_backup_last_apps"
+	KeyComposeBackupLastFile  = "compose_backup_last_file"
+	KeyComposeBackupLastApps  = "compose_backup_last_apps"
 
 	encryptionKeyFile = ".encryption-key"
 )
@@ -52,26 +54,28 @@ func NewStore(db *sql.DB, cfg config.Config) (*Store, error) {
 	}
 	s := &Store{db: db, box: box, mem: map[string]string{}}
 	defaults := map[string]string{
-		KeyLanguage:          config.DefaultLanguage,
-		KeyTheme:             config.DefaultTheme,
-		KeyTimezone:          cfg.Timezone,
-		KeyZimaOSAPIBaseURL:  cfg.ZimaOSAPIBaseURL,
-		KeyZimaOSAPIToken:    cfg.ZimaOSAPIToken,
-		KeyZimaOSUsername:    cfg.ZimaOSUsername,
-		KeyZimaOSPassword:    cfg.ZimaOSPassword,
-		KeyPollIntervalSec:   "5",
-		KeyDiscordWebhookURL: "",
-		KeyDiscordEnabled:    "false",
-		KeyDiscordNotifyOK:   "true",
-		KeyDiscordNotifyFail:     "true",
-		KeySetupCompleted:        "false",
-		KeyComposeBackupEnabled:  "true",
-		KeyComposeBackupCron:     "0 3 * * *",
-		KeyComposeBackupKeep:     "14",
-		KeyComposeBackupLastOK:   "",
+		KeyLanguage:               config.DefaultLanguage,
+		KeyTheme:                  config.DefaultTheme,
+		KeyTimezone:               cfg.Timezone,
+		KeyZimaOSAPIBaseURL:       cfg.ZimaOSAPIBaseURL,
+		KeyZimaOSAPIToken:         cfg.ZimaOSAPIToken,
+		KeyZimaOSUsername:         cfg.ZimaOSUsername,
+		KeyZimaOSPassword:         cfg.ZimaOSPassword,
+		KeyPollIntervalSec:        "5",
+		KeyDiscordWebhookURL:      "",
+		KeyDiscordEnabled:         "false",
+		KeyDiscordNotifyOK:        "true",
+		KeyDiscordNotifyFail:      "true",
+		KeySetupCompleted:         "false",
+		KeyComposeBackupEnabled:   "true",
+		KeyComposeBackupCron:      "0 3 * * *",
+		KeyComposeBackupKeep:      "14",
+		KeyComposeBackupSourceDir: "",
+		KeyComposeBackupOutDir:    "",
+		KeyComposeBackupLastOK:    "",
 		KeyComposeBackupLastError: "",
-		KeyComposeBackupLastFile: "",
-		KeyComposeBackupLastApps: "0",
+		KeyComposeBackupLastFile:  "",
+		KeyComposeBackupLastApps:  "0",
 	}
 	ctx := context.Background()
 	for k, v := range defaults {
@@ -216,26 +220,28 @@ func (s *Store) SetMany(ctx context.Context, values map[string]string) error {
 
 func (s *Store) PublicView() map[string]any {
 	return map[string]any{
-		"language":               s.Get(KeyLanguage),
-		"theme":                  s.Get(KeyTheme),
-		"timezone":               s.Get(KeyTimezone),
-		"zimaos_api_base_url":    s.Get(KeyZimaOSAPIBaseURL),
-		"zimaos_api_token_set":   s.Get(KeyZimaOSAPIToken) != "",
-		"zimaos_username":        s.Get(KeyZimaOSUsername),
-		"zimaos_password_set":    s.Get(KeyZimaOSPassword) != "",
-		"poll_interval_seconds":  s.GetInt(KeyPollIntervalSec, 5),
-		"discord_enabled":        s.GetBool(KeyDiscordEnabled),
-		"discord_webhook_set":    s.Get(KeyDiscordWebhookURL) != "",
-		"discord_notify_success": s.GetBool(KeyDiscordNotifyOK),
-		"discord_notify_failure":  s.GetBool(KeyDiscordNotifyFail),
-		"setup_completed":         s.GetBool(KeySetupCompleted),
-		"compose_backup_enabled":  s.GetBool(KeyComposeBackupEnabled),
-		"compose_backup_cron":     s.Get(KeyComposeBackupCron),
-		"compose_backup_keep":     s.GetInt(KeyComposeBackupKeep, 14),
-		"compose_backup_last_ok":  s.Get(KeyComposeBackupLastOK),
+		"language":                  s.Get(KeyLanguage),
+		"theme":                     s.Get(KeyTheme),
+		"timezone":                  s.Get(KeyTimezone),
+		"zimaos_api_base_url":       s.Get(KeyZimaOSAPIBaseURL),
+		"zimaos_api_token_set":      s.Get(KeyZimaOSAPIToken) != "",
+		"zimaos_username":           s.Get(KeyZimaOSUsername),
+		"zimaos_password_set":       s.Get(KeyZimaOSPassword) != "",
+		"poll_interval_seconds":     s.GetInt(KeyPollIntervalSec, 5),
+		"discord_enabled":           s.GetBool(KeyDiscordEnabled),
+		"discord_webhook_set":       s.Get(KeyDiscordWebhookURL) != "",
+		"discord_notify_success":    s.GetBool(KeyDiscordNotifyOK),
+		"discord_notify_failure":    s.GetBool(KeyDiscordNotifyFail),
+		"setup_completed":           s.GetBool(KeySetupCompleted),
+		"compose_backup_enabled":    s.GetBool(KeyComposeBackupEnabled),
+		"compose_backup_cron":       s.Get(KeyComposeBackupCron),
+		"compose_backup_keep":       s.GetInt(KeyComposeBackupKeep, 14),
+		"compose_backup_source_dir": s.Get(KeyComposeBackupSourceDir),
+		"compose_backup_out_dir":    s.Get(KeyComposeBackupOutDir),
+		"compose_backup_last_ok":    s.Get(KeyComposeBackupLastOK),
 		"compose_backup_last_error": s.Get(KeyComposeBackupLastError),
-		"compose_backup_last_file": s.Get(KeyComposeBackupLastFile),
-		"compose_backup_last_apps": s.GetInt(KeyComposeBackupLastApps, 0),
+		"compose_backup_last_file":  s.Get(KeyComposeBackupLastFile),
+		"compose_backup_last_apps":  s.GetInt(KeyComposeBackupLastApps, 0),
 	}
 }
 

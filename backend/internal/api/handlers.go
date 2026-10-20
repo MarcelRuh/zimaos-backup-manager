@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/auth"
@@ -155,15 +156,15 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	lastSuccess, _ := s.app.Runs.LastSuccessful(r.Context())
 	writeJSON(w, http.StatusOK, map[string]any{
-		"total_tasks":       len(tasks),
-		"running":           running,
-		"completed":         completed,
-		"failed":            failed,
-		"idle":              idle,
-		"last_success":      lastSuccess,
-		"api_connected":     connected,
-		"api_last_ok":       lastOK,
-		"api_last_error":    lastErr,
+		"total_tasks":    len(tasks),
+		"running":        running,
+		"completed":      completed,
+		"failed":         failed,
+		"idle":           idle,
+		"last_success":   lastSuccess,
+		"api_connected":  connected,
+		"api_last_ok":    lastOK,
+		"api_last_error": lastErr,
 	})
 }
 
@@ -445,6 +446,38 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	if v, ok := body["compose_backup_source_dir"]; ok {
+		src, ok := v.(string)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "invalid_compose_backup_source_dir")
+			return
+		}
+		src = strings.TrimSpace(src)
+		if err := composebackup.ValidateSourceDir(src, s.app.Config.CasaOSAppsDir); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_compose_backup_source_dir")
+			return
+		}
+		if src != "" {
+			src = filepath.Clean(src)
+		}
+		updates[settings.KeyComposeBackupSourceDir] = src
+	}
+	if v, ok := body["compose_backup_out_dir"]; ok {
+		out, ok := v.(string)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "invalid_compose_backup_out_dir")
+			return
+		}
+		out = strings.TrimSpace(out)
+		if out != "" {
+			if err := composebackup.ValidateOutDir(out, s.app.Config.DataDir); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_compose_backup_out_dir")
+				return
+			}
+			out = filepath.Clean(out)
+		}
+		updates[settings.KeyComposeBackupOutDir] = out
+	}
 
 	if err := s.app.Settings.SetMany(r.Context(), updates); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error")
@@ -457,6 +490,7 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		s.app.Settings.Get(settings.KeyZimaOSPassword),
 	)
 	_ = s.app.Scheduler.Reload(r.Context())
+	s.app.ComposeBackup.InvalidatePathCache()
 	_ = s.app.ComposeBackup.Reload(r.Context())
 	writeJSON(w, http.StatusOK, s.app.Settings.PublicView())
 }
