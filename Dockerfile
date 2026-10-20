@@ -21,13 +21,16 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
   -o /out/zimaos-backup-manager ./cmd/server
 
 FROM alpine:3.21
-RUN apk add --no-cache ca-certificates tzdata \
+RUN apk add --no-cache ca-certificates tzdata wget su-exec \
   && addgroup -S zbm \
   && adduser -S -G zbm -h /data zbm \
   && mkdir -p /data \
   && chown -R zbm:zbm /data
 COPY --from=backend /out/zimaos-backup-manager /usr/local/bin/zimaos-backup-manager
-USER zbm
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod 755 /entrypoint.sh
+# Entrypoint starts as root only to fix volume ownership, then drops to zbm.
+USER root
 ENV DATA_DIR=/data \
     LISTEN_ADDR=:8787 \
     TZ=Europe/Berlin \
@@ -36,4 +39,4 @@ EXPOSE 8787
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8787/api/health || exit 1
-ENTRYPOINT ["/usr/local/bin/zimaos-backup-manager"]
+ENTRYPOINT ["/entrypoint.sh"]

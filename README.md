@@ -105,7 +105,7 @@ Es werden **keine** Fortschrittsmeldungen gesendet. Pro eindeutigem Durchlauf ma
 | `api_unavailable` | `ZIMAOS_API_BASE_URL`, Token, Host-Erreichbarkeit |
 | Start blockiert | Task läuft bereits / Ziel `is_connected=false` / Task deaktiviert |
 | Discord ohne Nachricht | Webhook gesetzt? Global/Task-Flags? Nur Erfolg/Fehler, kein Progress |
-| Datenbankfehler | Volume-Rechte auf `/data` |
+| Datenbankfehler / `data directory is not writable` | Ab `0.1.1` setzt das Entrypoint die Rechte auf `/data` automatisch. Bei älteren Images auf `0.1.1`/`latest` updaten oder Volume neu anlegen. |
 
 Systemlogs: Einstellungen → System.
 
