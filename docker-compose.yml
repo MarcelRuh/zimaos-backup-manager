@@ -30,7 +30,8 @@ services:
       COMPOSE_HOST_ROOT: ${COMPOSE_HOST_ROOT:-/var/lib/casaos/apps}
       CASAOS_APPS_DIR: /host/casaos/apps
     volumes:
-      - zbm-data:/data
+      # App-eigene Daten unter AppData (wie andere CasaOS-Apps)
+      - ${APPDATA_HOST_PATH:-/DATA/AppData}/com-zimaos-backup-manager:/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Writable: compose files are copied into each app's AppData folder
       - ${APPDATA_HOST_PATH:-/DATA/AppData}:/host/appdata
@@ -44,6 +45,3 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-
-volumes:
-  zbm-data:
