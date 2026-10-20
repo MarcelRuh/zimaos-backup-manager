@@ -30,7 +30,8 @@ x-casaos:
   index: /
   port_map: "8787"
   scheme: http
-  icon: https://raw.githubusercontent.com/MarcelRuh/zimaos-backup-manager/main/deploy/zimaos/icon.png
+  # New filename so ZimaOS/CasaOS drops the cached old teal icon.svg
+  icon: https://raw.githubusercontent.com/MarcelRuh/zimaos-backup-manager/main/deploy/zimaos/app-icon.png?v=0.1.5
   title:
     en_US: ZimaOS Backup Manager
     de_DE: ZimaOS Backup Manager
@@ -50,7 +51,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "0.1.4"
+  version: "0.1.5"
   tips:
     before_install:
       en_US: |
