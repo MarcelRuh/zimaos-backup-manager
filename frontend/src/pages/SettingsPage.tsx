@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, Select, SecondaryButton } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
-import type { ComposeBackupStatus, Settings, Task } from "@/types";
+import type { ComposeBackupHook, ComposeBackupStatus, Settings, Task } from "@/types";
 import type { ThemeMode } from "@/hooks/useTheme";
 import { formatTs } from "@/lib/utils";
 
@@ -82,9 +82,10 @@ export function SettingsPage({
         poll_interval_seconds: settings.poll_interval_seconds,
         compose_backup_enabled: settings.compose_backup_enabled,
         compose_backup_cron: settings.compose_backup_cron || "0 3 * * *",
-        compose_backup_keep: settings.compose_backup_keep || 14,
-        compose_backup_source_dir: settings.compose_backup_source_dir ?? "",
-        compose_backup_out_dir: settings.compose_backup_out_dir ?? "",
+        compose_backup_appdata_dir: settings.compose_backup_appdata_dir ?? "",
+        compose_backup_appdata_host_root: settings.compose_backup_appdata_host_root ?? "",
+        compose_backup_compose_dir: settings.compose_backup_compose_dir ?? "",
+        compose_backup_compose_host_root: settings.compose_backup_compose_host_root ?? "",
       };
       if (token) body.zimaos_api_token = token;
       if (zimaPassword) body.zimaos_password = zimaPassword;
@@ -122,10 +123,10 @@ export function SettingsPage({
     }
   }
 
-  async function toggleTask(task: Task) {
+  async function updateTaskPrefs(task: Task, patch: Partial<Task["prefs"]>) {
     await api(`/api/tasks/${task.id}/prefs`, {
       method: "PUT",
-      body: JSON.stringify({ ...task.prefs, task_id: task.id, enabled: !task.prefs.enabled }),
+      body: JSON.stringify({ ...task.prefs, ...patch, task_id: task.id }),
     });
     await load();
   }
@@ -230,12 +231,31 @@ export function SettingsPage({
 
       <Card>
         <h3 className="mb-4 text-lg font-semibold">Backups</h3>
-        <div className="space-y-2">
+        <div className="space-y-4">
           {tasks.map((task) => (
-            <label key={task.id} className="flex items-center justify-between gap-3 text-sm">
-              <span>{task.name}</span>
-              <input type="checkbox" checked={task.prefs?.enabled ?? true} onChange={() => void toggleTask(task)} />
-            </label>
+            <div key={task.id} className="grid gap-2 border-b border-[var(--color-line)] pb-4 last:border-0 last:pb-0 md:grid-cols-[1fr_auto_minmax(12rem,16rem)] md:items-center">
+              <span className="text-sm font-medium">{task.name}</span>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={task.prefs?.enabled ?? true}
+                  onChange={() => void updateTaskPrefs(task, { enabled: !(task.prefs?.enabled ?? true) })}
+                />
+                {t("settings.taskEnabled")}
+              </label>
+              <div>
+                <Label>{t("settings.composeBackupHook")}</Label>
+                <Select
+                  value={task.prefs?.compose_backup_hook === "on_success" ? "on_success" : "off"}
+                  onChange={(e) =>
+                    void updateTaskPrefs(task, { compose_backup_hook: e.target.value as ComposeBackupHook })
+                  }
+                >
+                  <option value="off">{t("settings.composeBackupHookOff")}</option>
+                  <option value="on_success">{t("settings.composeBackupHookOnSuccess")}</option>
+                </Select>
+              </div>
+            </div>
           ))}
         </div>
       </Card>
@@ -260,147 +280,47 @@ export function SettingsPage({
             />
           </div>
           <div>
-            <Label>{t("settings.composeBackupKeep")}</Label>
+            <Label>{t("settings.composeAppDataHostRoot")}</Label>
             <Input
-              type="number"
-              min={1}
-              max={90}
-              value={settings.compose_backup_keep ?? 14}
-              onChange={(e) => setSettings({ ...settings, compose_backup_keep: Number(e.target.value) })}
+              className="font-mono text-xs"
+              value={settings.compose_backup_appdata_host_root || ""}
+              placeholder={composeStatus?.appdata_host_root || "/DATA/AppData"}
+              onChange={(e) => setSettings({ ...settings, compose_backup_appdata_host_root: e.target.value })}
             />
           </div>
-          <div className="md:col-span-2">
-            <Label>{t("settings.composeBackupSource")}</Label>
-            {(() => {
-              const sourceOpts = (composeStatus?.source_candidates || []).filter((c) => c.available);
-              const configured = settings.compose_backup_source_dir || "";
-              const sourceSelectValue = !configured
-                ? ""
-                : sourceOpts.some((c) => c.path === configured)
-                  ? configured
-                  : "__custom__";
-              return (
-                <>
-                  <Select
-                    value={sourceSelectValue}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") {
-                        setSettings({ ...settings, compose_backup_source_dir: "" });
-                        return;
-                      }
-                      if (v === "__custom__") {
-                        setSettings({
-                          ...settings,
-                          compose_backup_source_dir:
-                            configured || composeStatus?.source_dir || "/host/casaos/apps",
-                        });
-                        return;
-                      }
-                      setSettings({ ...settings, compose_backup_source_dir: v });
-                    }}
-                  >
-                    <option value="">{t("settings.composeBackupSourceAuto")}</option>
-                    {sourceOpts.map((c) => (
-                      <option key={c.path} value={c.path}>
-                        {c.path}
-                        {c.app_count ? ` · ${t("settings.composeBackupAppsFound", { count: c.app_count })}` : ""}
-                        {c.recommended ? " ★" : ""}
-                      </option>
-                    ))}
-                    <option value="__custom__">{t("settings.composeBackupSourceCustom")}</option>
-                  </Select>
-                  {sourceSelectValue === "__custom__" ? (
-                    <Input
-                      className="mt-2 font-mono text-xs"
-                      value={configured}
-                      onChange={(e) => setSettings({ ...settings, compose_backup_source_dir: e.target.value })}
-                      placeholder="/host/casaos/apps"
-                    />
-                  ) : null}
-                </>
-              );
-            })()}
-          </div>
-          <div className="md:col-span-2">
-            <Label>{t("settings.composeBackupOut")}</Label>
-            {(() => {
-              const defaultOut = composeStatus?.out_dir || "/data/casaos-apps-backups";
-              const outOpts = (composeStatus?.out_candidates || []).filter(
-                (c) => c.available && c.writable && c.label !== "default",
-              );
-              const configured = settings.compose_backup_out_dir || "";
-              const outSelectValue = !configured
-                ? ""
-                : outOpts.some((c) => c.path === configured)
-                  ? configured
-                  : "__custom__";
-              return (
-                <>
-                  <Select
-                    value={outSelectValue}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") {
-                        setSettings({ ...settings, compose_backup_out_dir: "" });
-                        return;
-                      }
-                      if (v === "__custom__") {
-                        setSettings({
-                          ...settings,
-                          compose_backup_out_dir: configured || defaultOut,
-                        });
-                        return;
-                      }
-                      setSettings({ ...settings, compose_backup_out_dir: v });
-                    }}
-                  >
-                    <option value="">{t("settings.composeBackupOutDefault")}</option>
-                    {outOpts.map((c) => (
-                      <option key={c.path} value={c.path}>
-                        {c.path}
-                        {c.recommended ? " ★" : ""}
-                      </option>
-                    ))}
-                    <option value="__custom__">{t("settings.composeBackupOutCustom")}</option>
-                  </Select>
-                  {outSelectValue === "__custom__" ? (
-                    <Input
-                      className="mt-2 font-mono text-xs"
-                      value={configured}
-                      onChange={(e) => setSettings({ ...settings, compose_backup_out_dir: e.target.value })}
-                      placeholder="/data/casaos-apps-backups"
-                    />
-                  ) : null}
-                </>
-              );
-            })()}
+          <div>
+            <Label>{t("settings.composeAppDataDir")}</Label>
+            <Input
+              className="font-mono text-xs"
+              value={settings.compose_backup_appdata_dir || ""}
+              placeholder={composeStatus?.appdata_dir || "/host/appdata"}
+              onChange={(e) => setSettings({ ...settings, compose_backup_appdata_dir: e.target.value })}
+            />
           </div>
         </div>
         {composeStatus && (
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">{t("settings.composeBackupSource")}</dt>
+              <dt className="text-[var(--color-muted)]">Docker</dt>
+              <dd>{composeStatus.docker_available ? t("settings.composeDockerOk") : t("settings.composeDockerMissing")}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-[var(--color-muted)]">AppData</dt>
               <dd className="truncate font-mono text-xs">
-                {composeStatus.source_dir}
-                {composeStatus.source_auto ? ` · ${t("settings.composeBackupSourceAuto")}` : ""}
+                {composeStatus.appdata_dir}
+                {composeStatus.appdata_available ? "" : ` · ${t("settings.composeBackupMissing")}`}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">{t("settings.composeBackupOut")}</dt>
-              <dd className="truncate font-mono text-xs">{composeStatus.out_dir}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">Status</dt>
-              <dd>
-                {composeStatus.source_available ? t("settings.composeBackupAvailable") : t("settings.composeBackupMissing")}
-              </dd>
+              <dt className="text-[var(--color-muted)]">{t("settings.composeProjects")}</dt>
+              <dd>{composeStatus.project_count ?? 0}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--color-muted)]">{t("settings.composeBackupLast")}</dt>
               <dd>
                 {composeStatus.last_ok_at ? formatTs(composeStatus.last_ok_at) : "—"}
-                {composeStatus.last_archive ? ` · ${composeStatus.last_archive}` : ""}
+                {composeStatus.last_ok_count != null ? ` · OK ${composeStatus.last_ok_count}` : ""}
+                {composeStatus.last_fail_count ? ` · Fail ${composeStatus.last_fail_count}` : ""}
               </dd>
             </div>
             {composeStatus.last_error && (
@@ -416,14 +336,15 @@ export function SettingsPage({
             {t("settings.composeBackupRun")}
           </SecondaryButton>
         </div>
-        {composeStatus?.archives?.length ? (
+        {composeStatus?.projects?.length ? (
           <div className="mt-4">
-            <p className="mb-2 text-sm font-medium">{t("settings.composeBackupArchives")}</p>
+            <p className="mb-2 text-sm font-medium">{t("settings.composeProjects")}</p>
             <ul className="space-y-1 font-mono text-xs text-[var(--color-muted)]">
-              {composeStatus.archives.map((a) => (
-                <li key={a.name}>
-                  {a.name}
-                  {a.bytes != null ? ` · ${a.bytes} B` : ""}
+              {composeStatus.projects.slice(0, 12).map((p) => (
+                <li key={p.name + p.compose_host}>
+                  {p.name} → AppData/{p.appdata_name}
+                  {p.compose_readable ? "" : " · compose?"}
+                  {p.appdata_writable ? "" : " · appdata?"}
                 </li>
               ))}
             </ul>

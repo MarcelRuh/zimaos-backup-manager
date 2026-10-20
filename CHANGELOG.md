@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7
+
+- Compose→AppData: Docker-Label-Erkennung der Apps, Mapping in den richtigen AppData-Ordner
+- Ablauf: ZimaOS-Backup erfolgreich → Compose nach AppData syncen → eigenes Discord-Embed
+- Mounts: Docker-Socket, AppData (RW), CasaOS-Apps (RO); `APPDATA_HOST_ROOT` konfigurierbar
+
 ## 0.1.6
 
 - Compose-Backup: Quellpfad automatisch erkennen oder in den Einstellungen wählen

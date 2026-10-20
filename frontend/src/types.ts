@@ -21,12 +21,15 @@ export type Subtask = {
   target: Device;
 };
 
+export type ComposeBackupHook = "off" | "on_success";
+
 export type TaskPrefs = {
   task_id: string;
   enabled: boolean;
   notify_enabled: boolean;
   notify_success: boolean;
   notify_failure: boolean;
+  compose_backup_hook?: ComposeBackupHook;
 };
 
 export type Task = {
@@ -85,38 +88,43 @@ export type Settings = {
   compose_backup_enabled: boolean;
   compose_backup_cron: string;
   compose_backup_keep: number;
-  compose_backup_source_dir?: string;
-  compose_backup_out_dir?: string;
+  compose_backup_appdata_dir?: string;
+  compose_backup_appdata_host_root?: string;
+  compose_backup_compose_dir?: string;
+  compose_backup_compose_host_root?: string;
+  compose_backup_docker_sock?: string;
   compose_backup_last_ok?: string;
   compose_backup_last_error?: string;
   compose_backup_last_file?: string;
   compose_backup_last_apps?: number;
+  compose_backup_last_fail?: number;
 };
 
-export type PathCandidate = {
-  path: string;
-  available: boolean;
-  app_count?: number;
-  writable?: boolean;
-  recommended?: boolean;
-  label?: string;
+export type ComposeProject = {
+  name: string;
+  compose_host: string;
+  compose_local: string;
+  appdata_name: string;
+  appdata_local: string;
+  containers: string[];
+  compose_readable: boolean;
+  appdata_writable: boolean;
 };
 
 export type ComposeBackupStatus = {
   enabled: boolean;
-  source_dir: string;
-  source_configured?: string;
-  source_auto: boolean;
-  source_available: boolean;
-  source_candidates?: PathCandidate[];
-  out_dir: string;
-  out_configured?: string;
-  out_candidates?: PathCandidate[];
+  docker_available: boolean;
+  docker_sock: string;
+  appdata_dir: string;
+  appdata_available: boolean;
+  appdata_host_root: string;
+  compose_dir: string;
+  compose_host_root: string;
+  projects: ComposeProject[];
+  project_count: number;
   cron: string;
-  keep: number;
   last_ok_at?: string | null;
   last_error?: string | null;
-  last_archive?: string | null;
-  last_app_count: number;
-  archives: { name: string; bytes?: number; modified_at?: string }[];
+  last_ok_count: number;
+  last_fail_count: number;
 };

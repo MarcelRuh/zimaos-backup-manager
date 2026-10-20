@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	ErrAPIDown          = errors.New("zimaos api not reachable")
-	ErrTaskDisabled     = errors.New("backup task disabled in manager")
-	ErrAlreadyRunning   = errors.New("backup already running")
-	ErrTargetOffline    = errors.New("backup target not connected")
-	ErrStartInProgress  = errors.New("start already in progress for this task")
+	ErrAPIDown         = errors.New("zimaos api not reachable")
+	ErrTaskDisabled    = errors.New("backup task disabled in manager")
+	ErrAlreadyRunning  = errors.New("backup already running")
+	ErrTargetOffline   = errors.New("backup target not connected")
+	ErrStartInProgress = errors.New("start already in progress for this task")
 )
 
 type Service struct {
@@ -26,7 +26,13 @@ type Service struct {
 	audit   *store.AuditStore
 }
 
-func NewService(client *zimaos.Client, mon *monitor.Service, runs *store.RunStore, prefs *store.PrefsStore, audit *store.AuditStore) *Service {
+func NewService(
+	client *zimaos.Client,
+	mon *monitor.Service,
+	runs *store.RunStore,
+	prefs *store.PrefsStore,
+	audit *store.AuditStore,
+) *Service {
 	return &Service{client: client, monitor: mon, runs: runs, prefs: prefs, audit: audit}
 }
 
@@ -70,7 +76,6 @@ func (s *Service) StartBackup(ctx context.Context, taskID string) (*store.Backup
 		return nil, "", fmt.Errorf("start task: %w", err)
 	}
 
-	// Refresh task after start for baseline
 	refreshed, err := s.client.GetTask(ctx, taskID)
 	if err != nil {
 		refreshed = task

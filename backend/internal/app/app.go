@@ -20,22 +20,22 @@ import (
 )
 
 type App struct {
-	Config         config.Config
-	Logger         *slog.Logger
-	DB             *db.DB
-	Settings       *settings.Store
-	Auth           *auth.Service
-	ZimaOS         *zimaos.Client
-	Runs           *store.RunStore
-	Prefs          *store.PrefsStore
-	Schedules      *store.ScheduleStore
-	Audit          *store.AuditStore
-	Monitor        *monitor.Service
-	Control        *control.Service
-	Scheduler      *scheduler.Scheduler
-	ComposeBackup  *composebackup.Service
-	Discord        *discord.Client
-	Hub            *events.Hub
+	Config        config.Config
+	Logger        *slog.Logger
+	DB            *db.DB
+	Settings      *settings.Store
+	Auth          *auth.Service
+	ZimaOS        *zimaos.Client
+	Runs          *store.RunStore
+	Prefs         *store.PrefsStore
+	Schedules     *store.ScheduleStore
+	Audit         *store.AuditStore
+	Monitor       *monitor.Service
+	Control       *control.Service
+	Scheduler     *scheduler.Scheduler
+	ComposeBackup *composebackup.Service
+	Discord       *discord.Client
+	Hub           *events.Hub
 }
 
 func New(cfg config.Config, logger *slog.Logger) (*App, error) {
@@ -68,10 +68,16 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	discordClient := discord.NewClient()
 	authSvc := auth.NewService(database.SQL)
 
-	mon := monitor.NewService(zClient, runs, prefs, audit, settingsStore, discordClient, hub, logger)
+	composeBackup := composebackup.New(composebackup.Paths{
+		DockerSock:      cfg.DockerSock,
+		AppDataDir:      cfg.AppDataDir,
+		AppDataHostRoot: cfg.AppDataHostRoot,
+		ComposeDir:      cfg.ComposeDir,
+		ComposeHostRoot: cfg.ComposeHostRoot,
+	}, settingsStore, audit, discordClient, logger)
+	mon := monitor.NewService(zClient, runs, prefs, audit, settingsStore, discordClient, hub, logger, composeBackup)
 	ctrl := control.NewService(zClient, mon, runs, prefs, audit)
 	sched := scheduler.New(schedules, ctrl, settingsStore, audit, logger)
-	composeBackup := composebackup.New(cfg.CasaOSAppsDir, cfg.DataDir, settingsStore, audit, logger)
 
 	a := &App{
 		Config:        cfg,

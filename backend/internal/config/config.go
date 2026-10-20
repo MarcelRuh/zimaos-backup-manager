@@ -19,6 +19,10 @@ const (
 	DefaultLanguage          = "de"
 	DefaultTheme             = "dark"
 	DefaultCasaOSAppsDir     = "/host/casaos/apps"
+	DefaultAppDataDir        = "/host/appdata"
+	DefaultDockerSock        = "/var/run/docker.sock"
+	DefaultComposeHostRoot   = "/var/lib/casaos/apps"
+	DefaultAppDataHostRoot   = "/DATA/AppData"
 )
 
 type Config struct {
@@ -37,8 +41,16 @@ type Config struct {
 	// TrustedProxies lists peer IPs allowed to set X-Forwarded-For.
 	// Empty (default) means XFF is ignored and RemoteAddr is used.
 	TrustedProxies []string
-	// CasaOSAppsDir is the host apps compose directory (bind-mounted read-only).
-	CasaOSAppsDir string
+	// ComposeDir is the container path where host CasaOS apps compose files are mounted (RO).
+	ComposeDir string
+	// ComposeHostRoot is the host path prefix rewritten to ComposeDir.
+	ComposeHostRoot string
+	// AppDataDir is the container path where host AppData is mounted (RW).
+	AppDataDir string
+	// AppDataHostRoot is the host AppData prefix as seen in docker mount sources.
+	AppDataHostRoot string
+	// DockerSock is the Docker engine socket path inside the container.
+	DockerSock string
 }
 
 func LoadFromEnv() (Config, error) {
@@ -67,7 +79,11 @@ func LoadFromEnv() (Config, error) {
 		CookieSecure:      envBoolOr("COOKIE_SECURE", false),
 		AppPublicURL:      strings.TrimRight(os.Getenv("APP_PUBLIC_URL"), "/"),
 		TrustedProxies:    splitCSV(os.Getenv("TRUSTED_PROXIES")),
-		CasaOSAppsDir:     envOr("CASAOS_APPS_DIR", DefaultCasaOSAppsDir),
+		ComposeDir:        envOr("CASAOS_APPS_DIR", DefaultCasaOSAppsDir),
+		ComposeHostRoot:   envOr("COMPOSE_HOST_ROOT", DefaultComposeHostRoot),
+		AppDataDir:        envOr("APPDATA_DIR", DefaultAppDataDir),
+		AppDataHostRoot:   envOr("APPDATA_HOST_ROOT", DefaultAppDataHostRoot),
+		DockerSock:        envOr("DOCKER_SOCK", DefaultDockerSock),
 	}
 
 	if err := os.MkdirAll(cfg.DataDir, 0o750); err != nil {

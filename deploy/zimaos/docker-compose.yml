@@ -2,7 +2,7 @@ name: zimaos-backup-manager
 
 services:
   zimaos-backup-manager:
-    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.6
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.7
     container_name: zimaos-backup-manager
     restart: unless-stopped
     ports:
@@ -14,11 +14,23 @@ services:
       DATA_DIR: /data
       TZ: Europe/Berlin
       ZIMAOS_API_BASE_URL: http://host.docker.internal
+      DOCKER_SOCK: /var/run/docker.sock
+      # Adjust APPDATA_HOST_ROOT if your AppData lives elsewhere (e.g. /media/SSD-Storage/AppData)
+      APPDATA_HOST_ROOT: /DATA/AppData
+      APPDATA_DIR: /host/appdata
+      COMPOSE_HOST_ROOT: /var/lib/casaos/apps
       CASAOS_APPS_DIR: /host/casaos/apps
     volumes:
       - type: volume
         source: zbm-data
         target: /data
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+      - type: bind
+        source: /DATA/AppData
+        target: /host/appdata
       - type: bind
         source: /var/lib/casaos/apps
         target: /host/casaos/apps
@@ -35,7 +47,6 @@ x-casaos:
   index: /
   port_map: "8787"
   scheme: http
-  # Full brand logo (user artwork). jsDelivr + new path to bust CasaOS cache of old teal icon.svg
   icon: https://cdn.jsdelivr.net/gh/MarcelRuh/zimaos-backup-manager@main/deploy/zimaos/app-icon.jpg?v=20261020
   title:
     en_US: ZimaOS Backup Manager
@@ -46,27 +57,27 @@ x-casaos:
   description:
     en_US: |
       Web UI to discover, start, schedule and monitor existing ZimaOS backup tasks.
-      Also archives CasaOS app compose files from /var/lib/casaos/apps into the app data volume.
+      After a successful ZimaOS backup, copies each app's docker-compose.yml into its AppData folder.
     de_DE: |
       Weboberfläche zum Erkennen, Starten, Planen und Überwachen vorhandener ZimaOS-Backup-Tasks.
-      Archiviert zusätzlich CasaOS-Compose-Dateien aus /var/lib/casaos/apps im App-Datenvolume.
+      Nach erfolgreichem ZimaOS-Backup: Compose-Dateien per Docker-Erkennung in die AppData-Ordner legen.
   author: Silence
   developer: Silence
   category: Productivity
   architectures:
     - amd64
     - arm64
-  version: "0.1.6"
+  version: "0.1.7"
   tips:
     before_install:
       en_US: |
-        Ensure the container can reach the ZimaOS host API via host.docker.internal.
-        The bind mount /var/lib/casaos/apps (read-only) enables compose-file backups under Settings.
-        After install, open the WebUI, complete admin setup, then enter ZimaOS username/password under Settings.
+        Needs Docker socket, AppData (RW) and /var/lib/casaos/apps (RO) mounts.
+        Set APPDATA_HOST_ROOT to your real AppData path if it is not /DATA/AppData.
+        After install: admin setup, ZimaOS login under Settings, enable "Compose after success" per backup task.
       de_DE: |
-        Stelle sicher, dass der Container die ZimaOS-Host-API über host.docker.internal erreicht.
-        Der RO-Mount /var/lib/casaos/apps aktiviert Compose-Backups unter Einstellungen.
-        Nach der Installation Admin anlegen und unter Einstellungen ZimaOS-Benutzername/Passwort hinterlegen.
+        Benötigt Docker-Socket, AppData (RW) und /var/lib/casaos/apps (RO).
+        APPDATA_HOST_ROOT anpassen, falls AppData nicht unter /DATA/AppData liegt.
+        Nach Installation: Admin anlegen, ZimaOS-Login, pro Task „Compose nach Erfolg“ aktivieren.
   website: https://github.com/MarcelRuh/zimaos-backup-manager
   repo: https://github.com/MarcelRuh/zimaos-backup-manager
   support: https://github.com/MarcelRuh/zimaos-backup-manager/issues

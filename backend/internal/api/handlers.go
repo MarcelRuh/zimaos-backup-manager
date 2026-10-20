@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/auth"
@@ -227,6 +225,7 @@ func (s *Server) handlePutPrefs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.TaskID = r.PathValue("id")
+	body.ComposeBackupHook = store.NormalizeComposeHook(body.ComposeBackupHook)
 	if err := s.app.Prefs.Upsert(r.Context(), body); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error")
 		return
@@ -446,38 +445,11 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if v, ok := body["compose_backup_source_dir"]; ok {
-		src, ok := v.(string)
-		if !ok {
-			writeError(w, http.StatusBadRequest, "invalid_compose_backup_source_dir")
-			return
-		}
-		src = strings.TrimSpace(src)
-		if err := composebackup.ValidateSourceDir(src, s.app.Config.CasaOSAppsDir); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid_compose_backup_source_dir")
-			return
-		}
-		if src != "" {
-			src = filepath.Clean(src)
-		}
-		updates[settings.KeyComposeBackupSourceDir] = src
-	}
-	if v, ok := body["compose_backup_out_dir"]; ok {
-		out, ok := v.(string)
-		if !ok {
-			writeError(w, http.StatusBadRequest, "invalid_compose_backup_out_dir")
-			return
-		}
-		out = strings.TrimSpace(out)
-		if out != "" {
-			if err := composebackup.ValidateOutDir(out, s.app.Config.DataDir); err != nil {
-				writeError(w, http.StatusBadRequest, "invalid_compose_backup_out_dir")
-				return
-			}
-			out = filepath.Clean(out)
-		}
-		updates[settings.KeyComposeBackupOutDir] = out
-	}
+	setStr("compose_backup_appdata_dir", settings.KeyComposeAppDataDir)
+	setStr("compose_backup_appdata_host_root", settings.KeyComposeAppDataHostRoot)
+	setStr("compose_backup_compose_dir", settings.KeyComposeMountDir)
+	setStr("compose_backup_compose_host_root", settings.KeyComposeHostRoot)
+	setStr("compose_backup_docker_sock", settings.KeyComposeDockerSock)
 
 	if err := s.app.Settings.SetMany(r.Context(), updates); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error")
@@ -490,7 +462,6 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		s.app.Settings.Get(settings.KeyZimaOSPassword),
 	)
 	_ = s.app.Scheduler.Reload(r.Context())
-	s.app.ComposeBackup.InvalidatePathCache()
 	_ = s.app.ComposeBackup.Reload(r.Context())
 	writeJSON(w, http.StatusOK, s.app.Settings.PublicView())
 }
@@ -500,13 +471,15 @@ func (s *Server) handleComposeBackupStatus(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) handleComposeBackupRun(w http.ResponseWriter, r *http.Request) {
-	res, err := s.app.ComposeBackup.Run(r.Context())
+	res, err := s.app.ComposeBackup.Run(r.Context(), "", "manual")
 	if err != nil {
 		switch {
 		case errors.Is(err, composebackup.ErrDisabled):
 			writeError(w, http.StatusConflict, "compose_backup_disabled")
-		case errors.Is(err, composebackup.ErrSourceMissing):
-			writeError(w, http.StatusFailedDependency, "compose_backup_source_missing")
+		case errors.Is(err, composebackup.ErrAppDataMissing):
+			writeError(w, http.StatusFailedDependency, "compose_backup_appdata_missing")
+		case errors.Is(err, composebackup.ErrDockerMissing):
+			writeError(w, http.StatusFailedDependency, "compose_backup_docker_missing")
 		case errors.Is(err, composebackup.ErrBusy):
 			writeError(w, http.StatusConflict, "compose_backup_busy")
 		default:
@@ -515,10 +488,9 @@ func (s *Server) handleComposeBackupRun(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"archive":    filepath.Base(res.ArchivePath),
-		"app_count":  res.AppCount,
-		"file_count": res.FileCount,
-		"bytes":      res.Bytes,
+		"ok_count":   res.OKCount,
+		"fail_count": res.FailCount,
+		"projects":   res.Projects,
 		"created_at": res.CreatedAt.UTC().Format(time.RFC3339),
 		"status":     s.app.ComposeBackup.Status(),
 	})

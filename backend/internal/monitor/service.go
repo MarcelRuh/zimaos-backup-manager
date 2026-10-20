@@ -13,6 +13,11 @@ import (
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/zimaos"
 )
 
+// ComposeAfterSuccess syncs Docker Compose files into AppData after a successful ZimaOS backup.
+type ComposeAfterSuccess interface {
+	RunAfterBackupSuccess(ctx context.Context, taskID, backupName string)
+}
+
 type Service struct {
 	client   *zimaos.Client
 	runs     *store.RunStore
@@ -20,6 +25,7 @@ type Service struct {
 	audit    *store.AuditStore
 	settings *settings.Store
 	discord  *discord.Client
+	compose  ComposeAfterSuccess
 	hub      *events.Hub
 	logger   *slog.Logger
 
@@ -41,6 +47,7 @@ func NewService(
 	discordClient *discord.Client,
 	hub *events.Hub,
 	logger *slog.Logger,
+	compose ComposeAfterSuccess,
 ) *Service {
 	return &Service{
 		client:   client,
@@ -49,6 +56,7 @@ func NewService(
 		audit:    audit,
 		settings: settingsStore,
 		discord:  discordClient,
+		compose:  compose,
 		hub:      hub,
 		logger:   logger,
 		taskLock: map[string]struct{}{},
@@ -279,9 +287,30 @@ func (s *Service) advanceRun(ctx context.Context, run *store.BackupRun, task zim
 	_ = s.runs.Update(ctx, run)
 	s.hub.Publish("run", run)
 
-	if IsTerminal(next) && !run.NotificationSent {
-		s.maybeNotify(ctx, run)
+	if IsTerminal(next) && (prev == ResultRunning || prev == ResultConnectionLost) {
+		if IsNotifySuccess(next) {
+			s.maybeComposeAfterSuccess(ctx, run)
+		}
+		if !run.NotificationSent {
+			s.maybeNotify(ctx, run)
+		}
 	}
+}
+
+func (s *Service) maybeComposeAfterSuccess(ctx context.Context, run *store.BackupRun) {
+	if s.compose == nil {
+		return
+	}
+	prefs, err := s.prefs.Get(ctx, run.TaskID)
+	if err != nil || !prefs.ComposeOnSuccess() {
+		return
+	}
+	// Run async so Discord/Zima notify and poll loop stay responsive.
+	go func() {
+		cctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		defer cancel()
+		s.compose.RunAfterBackupSuccess(cctx, run.TaskID, run.BackupName)
+	}()
 }
 
 func (s *Service) maybeNotify(ctx context.Context, run *store.BackupRun) {

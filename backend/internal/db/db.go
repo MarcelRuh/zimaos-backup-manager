@@ -148,12 +148,27 @@ func (d *DB) Migrate(ctx context.Context) error {
 		}
 	}
 
+	now := time.Now().UTC().Format(time.RFC3339Nano)
 	var count int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations WHERE version = 1`).Scan(&count); err != nil {
 		return err
 	}
 	if count == 0 {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES (1, ?)`, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES (1, ?)`, now); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations WHERE version = 2`).Scan(&count); err != nil {
+		return err
+	}
+	if count == 0 {
+		if _, err := tx.ExecContext(ctx, `
+			ALTER TABLE task_prefs ADD COLUMN compose_backup_hook TEXT NOT NULL DEFAULT 'off'
+		`); err != nil {
+			return fmt.Errorf("migrate v2 compose_backup_hook: %w", err)
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES (2, ?)`, now); err != nil {
 			return err
 		}
 	}

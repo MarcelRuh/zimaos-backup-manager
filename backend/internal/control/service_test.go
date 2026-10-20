@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/MarcelRuh/zimaos-backup-manager/internal/config"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/db"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/discord"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/events"
@@ -16,7 +17,6 @@ import (
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/settings"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/store"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/zimaos"
-	"github.com/MarcelRuh/zimaos-backup-manager/internal/config"
 )
 
 func TestStartBackupAndRejectDoubleStart(t *testing.T) {
@@ -59,7 +59,7 @@ func TestStartBackupAndRejectDoubleStart(t *testing.T) {
 	prefs := store.NewPrefsStore(database.SQL)
 	audit := store.NewAuditStore(database.SQL)
 	hub := events.NewHub()
-	mon := monitor.NewService(client, runs, prefs, audit, settingsStore, discord.NewClient(), hub, slog.Default())
+	mon := monitor.NewService(client, runs, prefs, audit, settingsStore, discord.NewClient(), hub, slog.Default(), nil)
 	ctrl := NewService(client, mon, runs, prefs, audit)
 
 	run, msg, err := ctrl.StartBackup(context.Background(), "4")

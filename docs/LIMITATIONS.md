@@ -45,9 +45,18 @@ Der Backup Manager speichert optional ZimaOS-Benutzername/Passwort und holt bei 
 
 Das ZimaOS-Passwort liegt in SQLite nur AES-GCM-verschlüsselt (`enc:v1:…`); der Schlüssel liegt separat unter `DATA_DIR/.encryption-key` (Mode 0600). Verlust der Key-Datei macht gespeicherte Passwörter unlesbar – dann neu setzen.
 
-## CasaOS Compose-Backup (lokal)
+## Compose → AppData (nach ZimaOS-Backup)
 
-Zusätzlich zu den ZimaOS-Backup-Tasks kann der Manager die Compose-Dateien unter `/var/lib/casaos/apps` als `tar.gz` nach `/data/casaos-apps-backups` archivieren. Dafür ist ein **read-only Bind-Mount** nötig (siehe `docker-compose.yml`). Das ist **kein** Ersatz für AppData- oder Medien-Backups und kein vollständiges System-Backup.
+Nach **erfolgreichem** ZimaOS-Backup (wenn am Task `compose_backup_hook=on_success` gesetzt ist) erkennt der Manager Docker-Compose-Projekte über Labels (`com.docker.compose.project.config_files`) und schreibt `docker-compose.yml` in den zugehörigen AppData-Ordner.
+
+Voraussetzungen (Compose-Mounts):
+
+- Docker-Socket (`/var/run/docker.sock`)
+- AppData RW (z. B. `/DATA/AppData` → `/host/appdata`)
+- CasaOS-Apps RO (z. B. `/var/lib/casaos/apps` → `/host/casaos/apps`)
+- `APPDATA_HOST_ROOT` muss dem Pfad entsprechen, der in `docker inspect` Mounts erscheint (z. B. `/DATA/AppData` oder `/media/SSD-Storage/AppData`)
+
+Das ist **kein** Ersatz für das ZimaOS-AppData-Backup selbst und stoppt keine Container. Discord sendet ein **eigenes** Embed für den Compose-Lauf.
 
 ## Live-Tests
 

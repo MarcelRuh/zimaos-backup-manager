@@ -30,12 +30,16 @@ const (
 	KeyComposeBackupEnabled   = "compose_backup_enabled"
 	KeyComposeBackupCron      = "compose_backup_cron"
 	KeyComposeBackupKeep      = "compose_backup_keep"
-	KeyComposeBackupSourceDir = "compose_backup_source_dir"
-	KeyComposeBackupOutDir    = "compose_backup_out_dir"
+	KeyComposeAppDataDir      = "compose_backup_appdata_dir"
+	KeyComposeAppDataHostRoot = "compose_backup_appdata_host_root"
+	KeyComposeMountDir        = "compose_backup_compose_dir"
+	KeyComposeHostRoot        = "compose_backup_compose_host_root"
+	KeyComposeDockerSock      = "compose_backup_docker_sock"
 	KeyComposeBackupLastOK    = "compose_backup_last_ok"
 	KeyComposeBackupLastError = "compose_backup_last_error"
 	KeyComposeBackupLastFile  = "compose_backup_last_file"
 	KeyComposeBackupLastApps  = "compose_backup_last_apps"
+	KeyComposeBackupLastFail  = "compose_backup_last_fail"
 
 	encryptionKeyFile = ".encryption-key"
 )
@@ -70,12 +74,16 @@ func NewStore(db *sql.DB, cfg config.Config) (*Store, error) {
 		KeyComposeBackupEnabled:   "true",
 		KeyComposeBackupCron:      "0 3 * * *",
 		KeyComposeBackupKeep:      "14",
-		KeyComposeBackupSourceDir: "",
-		KeyComposeBackupOutDir:    "",
+		KeyComposeAppDataDir:      "",
+		KeyComposeAppDataHostRoot: "",
+		KeyComposeMountDir:        "",
+		KeyComposeHostRoot:        "",
+		KeyComposeDockerSock:      "",
 		KeyComposeBackupLastOK:    "",
 		KeyComposeBackupLastError: "",
 		KeyComposeBackupLastFile:  "",
 		KeyComposeBackupLastApps:  "0",
+		KeyComposeBackupLastFail:  "0",
 	}
 	ctx := context.Background()
 	for k, v := range defaults {
@@ -220,28 +228,32 @@ func (s *Store) SetMany(ctx context.Context, values map[string]string) error {
 
 func (s *Store) PublicView() map[string]any {
 	return map[string]any{
-		"language":                  s.Get(KeyLanguage),
-		"theme":                     s.Get(KeyTheme),
-		"timezone":                  s.Get(KeyTimezone),
-		"zimaos_api_base_url":       s.Get(KeyZimaOSAPIBaseURL),
-		"zimaos_api_token_set":      s.Get(KeyZimaOSAPIToken) != "",
-		"zimaos_username":           s.Get(KeyZimaOSUsername),
-		"zimaos_password_set":       s.Get(KeyZimaOSPassword) != "",
-		"poll_interval_seconds":     s.GetInt(KeyPollIntervalSec, 5),
-		"discord_enabled":           s.GetBool(KeyDiscordEnabled),
-		"discord_webhook_set":       s.Get(KeyDiscordWebhookURL) != "",
-		"discord_notify_success":    s.GetBool(KeyDiscordNotifyOK),
-		"discord_notify_failure":    s.GetBool(KeyDiscordNotifyFail),
-		"setup_completed":           s.GetBool(KeySetupCompleted),
-		"compose_backup_enabled":    s.GetBool(KeyComposeBackupEnabled),
-		"compose_backup_cron":       s.Get(KeyComposeBackupCron),
-		"compose_backup_keep":       s.GetInt(KeyComposeBackupKeep, 14),
-		"compose_backup_source_dir": s.Get(KeyComposeBackupSourceDir),
-		"compose_backup_out_dir":    s.Get(KeyComposeBackupOutDir),
-		"compose_backup_last_ok":    s.Get(KeyComposeBackupLastOK),
-		"compose_backup_last_error": s.Get(KeyComposeBackupLastError),
-		"compose_backup_last_file":  s.Get(KeyComposeBackupLastFile),
-		"compose_backup_last_apps":  s.GetInt(KeyComposeBackupLastApps, 0),
+		"language":                         s.Get(KeyLanguage),
+		"theme":                            s.Get(KeyTheme),
+		"timezone":                         s.Get(KeyTimezone),
+		"zimaos_api_base_url":              s.Get(KeyZimaOSAPIBaseURL),
+		"zimaos_api_token_set":             s.Get(KeyZimaOSAPIToken) != "",
+		"zimaos_username":                  s.Get(KeyZimaOSUsername),
+		"zimaos_password_set":              s.Get(KeyZimaOSPassword) != "",
+		"poll_interval_seconds":            s.GetInt(KeyPollIntervalSec, 5),
+		"discord_enabled":                  s.GetBool(KeyDiscordEnabled),
+		"discord_webhook_set":              s.Get(KeyDiscordWebhookURL) != "",
+		"discord_notify_success":           s.GetBool(KeyDiscordNotifyOK),
+		"discord_notify_failure":           s.GetBool(KeyDiscordNotifyFail),
+		"setup_completed":                  s.GetBool(KeySetupCompleted),
+		"compose_backup_enabled":           s.GetBool(KeyComposeBackupEnabled),
+		"compose_backup_cron":              s.Get(KeyComposeBackupCron),
+		"compose_backup_keep":              s.GetInt(KeyComposeBackupKeep, 14),
+		"compose_backup_appdata_dir":       s.Get(KeyComposeAppDataDir),
+		"compose_backup_appdata_host_root": s.Get(KeyComposeAppDataHostRoot),
+		"compose_backup_compose_dir":       s.Get(KeyComposeMountDir),
+		"compose_backup_compose_host_root": s.Get(KeyComposeHostRoot),
+		"compose_backup_docker_sock":       s.Get(KeyComposeDockerSock),
+		"compose_backup_last_ok":           s.Get(KeyComposeBackupLastOK),
+		"compose_backup_last_error":        s.Get(KeyComposeBackupLastError),
+		"compose_backup_last_file":         s.Get(KeyComposeBackupLastFile),
+		"compose_backup_last_apps":         s.GetInt(KeyComposeBackupLastApps, 0),
+		"compose_backup_last_fail":         s.GetInt(KeyComposeBackupLastFail, 0),
 	}
 }
 

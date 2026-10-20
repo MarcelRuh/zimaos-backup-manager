@@ -11,7 +11,7 @@
 [![Release](https://img.shields.io/github/v/release/MarcelRuh/zimaos-backup-manager?include_prereleases)](https://github.com/MarcelRuh/zimaos-backup-manager/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-> Status: **v0.1.6** — Dark-Neon UI, optional CasaOS-Compose-Backup mit wählbaren Pfaden, Docker/GHCR.
+> Status: **v0.1.7** — Dark-Neon UI, Compose→AppData nach ZimaOS-Backup, Docker/GHCR.
 
 Nutzt ausschließlich die bestätigte ZimaOS-Backup-API. ZimaOS selbst wird nicht verändert.
 

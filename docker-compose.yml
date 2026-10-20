@@ -2,12 +2,12 @@ name: zimaos-backup-manager
 
 services:
   zimaos-backup-manager:
-    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.6
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.7
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: "0.1.6"
+        VERSION: "0.1.7"
     container_name: zimaos-backup-manager
     restart: unless-stopped
     ports:
@@ -16,18 +16,25 @@ services:
       LISTEN_ADDR: ":8787"
       DATA_DIR: /data
       TZ: Europe/Berlin
-      # From inside the container, localhost is the container itself.
-      # host.docker.internal + host-gateway reaches the ZimaOS host API.
       ZIMAOS_API_BASE_URL: ${ZIMAOS_API_BASE_URL:-http://host.docker.internal}
       ZIMAOS_API_USERNAME: ${ZIMAOS_API_USERNAME:-}
       ZIMAOS_API_PASSWORD: ${ZIMAOS_API_PASSWORD:-}
       ZIMAOS_API_TOKEN: ${ZIMAOS_API_TOKEN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      # Host path with CasaOS/ZimaOS app compose files (mounted below).
-      CASAOS_APPS_DIR: ${CASAOS_APPS_DIR:-/host/casaos/apps}
+      # Docker socket for compose project discovery (labels → AppData mapping)
+      DOCKER_SOCK: /var/run/docker.sock
+      # Host AppData path as seen in docker inspect mounts
+      APPDATA_HOST_ROOT: ${APPDATA_HOST_ROOT:-/DATA/AppData}
+      APPDATA_DIR: /host/appdata
+      # Host CasaOS apps compose root rewritten into the container mount
+      COMPOSE_HOST_ROOT: ${COMPOSE_HOST_ROOT:-/var/lib/casaos/apps}
+      CASAOS_APPS_DIR: /host/casaos/apps
     volumes:
       - zbm-data:/data
-      # Read-only: docker-compose.yml of installed apps
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Writable: compose files are copied into each app's AppData folder
+      - ${APPDATA_HOST_PATH:-/DATA/AppData}:/host/appdata
+      # Read-only: source docker-compose.yml files
       - ${CASAOS_APPS_HOST_PATH:-/var/lib/casaos/apps}:/host/casaos/apps:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"

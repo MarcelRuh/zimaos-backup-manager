@@ -82,6 +82,6 @@ func Transition(obs Observation) Result {
 	return ResultUnknown
 }
 
-func IsTerminal(r Result) bool       { return domain.IsTerminal(r) }
-func IsNotifySuccess(r Result) bool  { return domain.IsNotifySuccess(r) }
-func IsNotifyFailure(r Result) bool  { return domain.IsNotifyFailure(r) }
+func IsTerminal(r Result) bool      { return domain.IsTerminal(r) }
+func IsNotifySuccess(r Result) bool { return domain.IsNotifySuccess(r) }
+func IsNotifyFailure(r Result) bool { return domain.IsNotifyFailure(r) }

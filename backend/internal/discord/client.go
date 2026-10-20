@@ -142,6 +142,45 @@ func FailureEmbed(backupName, taskID, duration, files, dataAmount, errMsg string
 	}
 }
 
+func ComposeSuccessEmbed(backupName, taskID string, okCount, failCount int, at time.Time, loc *time.Location) Embed {
+	if strings.TrimSpace(backupName) == "" {
+		backupName = "—"
+	}
+	return Embed{
+		Title: "✅ Compose → AppData erfolgreich",
+		Color: ColorGreen,
+		Fields: []EmbedField{
+			{Name: "📦 Nach Backup", Value: backupName, Inline: true},
+			{Name: "🧩 Apps OK", Value: fmt.Sprintf("%d", okCount), Inline: true},
+			{Name: "⚠️ Fehler", Value: fmt.Sprintf("%d", failCount), Inline: true},
+			{Name: "📁 Ziel", Value: "AppData/*/docker-compose.yml", Inline: false},
+		},
+		Footer:    &EmbedFooter{Text: FormatFooter(taskID, at, loc)},
+		Timestamp: at.UTC().Format(time.RFC3339),
+	}
+}
+
+func ComposeFailureEmbed(backupName, taskID string, okCount, failCount int, errMsg string, at time.Time, loc *time.Location) Embed {
+	if strings.TrimSpace(backupName) == "" {
+		backupName = "—"
+	}
+	if strings.TrimSpace(errMsg) == "" {
+		errMsg = "Compose-Sync nach Backup fehlgeschlagen."
+	}
+	return Embed{
+		Title: "❌ Compose → AppData fehlgeschlagen",
+		Color: ColorRed,
+		Fields: []EmbedField{
+			{Name: "📦 Nach Backup", Value: backupName, Inline: true},
+			{Name: "🧩 Apps OK", Value: fmt.Sprintf("%d", okCount), Inline: true},
+			{Name: "⚠️ Fehler", Value: fmt.Sprintf("%d", failCount), Inline: true},
+			{Name: "🚨 Meldung", Value: truncate(errMsg, 900), Inline: false},
+		},
+		Footer:    &EmbedFooter{Text: FormatFooter(taskID, at, loc)},
+		Timestamp: at.UTC().Format(time.RFC3339),
+	}
+}
+
 func TestEmbed(loc *time.Location) Embed {
 	now := time.Now()
 	return Embed{
