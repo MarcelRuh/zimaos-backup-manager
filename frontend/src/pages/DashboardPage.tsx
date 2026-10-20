@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { formatTs } from "@/lib/utils";
 import { useLiveRefresh } from "@/hooks/useLiveRefresh";
 import { Card, StatusPill } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import type { BackupRun } from "@/types";
 
 type Dash = {
@@ -46,22 +47,22 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold">{t("dashboard.title")}</h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">{t("dashboard.api")}</p>
-        </div>
-        <StatusPill
-          tone={data.api_connected ? "ok" : "err"}
-          label={data.api_connected ? t("dashboard.connected") : t("dashboard.disconnected")}
-        />
-      </div>
+      <PageHeader
+        title={t("dashboard.title")}
+        subtitle={t("dashboard.api")}
+        action={
+          <StatusPill
+            tone={data.api_connected ? "ok" : "err"}
+            label={data.api_connected ? t("dashboard.connected") : t("dashboard.disconnected")}
+          />
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label}>
             <p className="text-sm text-[var(--color-muted)]">{s.label}</p>
-            <p className="mt-2 font-mono text-3xl font-semibold tabular-nums">{s.value}</p>
+            <p className="zbm-title mt-2 text-3xl tabular-nums">{s.value}</p>
           </Card>
         ))}
       </div>

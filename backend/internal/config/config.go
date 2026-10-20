@@ -17,7 +17,7 @@ const (
 	DefaultPollInterval      = 5 * time.Second
 	DefaultSessionCookieName = "zbm_session"
 	DefaultLanguage          = "de"
-	DefaultTheme             = "system"
+	DefaultTheme             = "dark"
 )
 
 type Config struct {
@@ -33,6 +33,9 @@ type Config struct {
 	SessionCookieName string
 	CookieSecure      bool
 	AppPublicURL      string
+	// TrustedProxies lists peer IPs allowed to set X-Forwarded-For.
+	// Empty (default) means XFF is ignored and RemoteAddr is used.
+	TrustedProxies []string
 }
 
 func LoadFromEnv() (Config, error) {
@@ -60,6 +63,7 @@ func LoadFromEnv() (Config, error) {
 		SessionCookieName: envOr("SESSION_COOKIE_NAME", DefaultSessionCookieName),
 		CookieSecure:      envBoolOr("COOKIE_SECURE", false),
 		AppPublicURL:      strings.TrimRight(os.Getenv("APP_PUBLIC_URL"), "/"),
+		TrustedProxies:    splitCSV(os.Getenv("TRUSTED_PROXIES")),
 	}
 
 	if err := os.MkdirAll(cfg.DataDir, 0o750); err != nil {
@@ -107,4 +111,20 @@ func envBoolOr(key string, fallback bool) bool {
 	default:
 		return fallback
 	}
+}
+
+func splitCSV(v string) []string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

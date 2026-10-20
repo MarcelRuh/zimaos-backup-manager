@@ -36,6 +36,24 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  const brand = (
+    <div className="mb-6 flex items-center gap-3">
+      <img
+        src="/brand/zimaos-backup-manager-icon.png"
+        alt=""
+        width={44}
+        height={44}
+        className="h-11 w-11 shrink-0 rounded-[4px] object-cover shadow-[0_0_20px_rgba(255,0,110,0.25)]"
+      />
+      <div className="min-w-0">
+        <p className="zbm-logo-text text-sm leading-none">ZIMAOS</p>
+        <p className="mt-1 truncate text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--color-muted)]">
+          Backup Manager
+        </p>
+      </div>
+    </div>
+  );
+
   const nav = (
     <nav className="flex flex-col gap-1">
       {links.map(({ to, key, icon: Icon }) => (
@@ -46,10 +64,10 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
           onClick={() => setOpen(false)}
           className={({ isActive }) =>
             cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+              "flex items-center gap-3 px-3 py-2.5 text-sm font-medium uppercase tracking-[0.05em] transition",
               isActive
-                ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-                : "text-[var(--color-muted)] hover:bg-[color-mix(in_oklab,var(--color-surface),var(--color-ink)_4%)] hover:text-[var(--color-ink)]",
+                ? "zbm-nav-active"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-ink)]",
             )
           }
         >
@@ -61,28 +79,34 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
   );
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-4 md:px-6 md:py-6">
-      <aside className="hidden w-64 shrink-0 md:block">
-        <div className="sticky top-6 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[0_10px_30px_-24px_rgba(15,23,42,0.45)]">
-          <div className="mb-6">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-accent)]">ZimaOS</p>
-            <h1 className="mt-1 text-lg font-semibold leading-tight">{t("appName")}</h1>
-          </div>
+    <div className="mx-auto flex min-h-screen max-w-7xl gap-0 px-0 md:gap-0 md:px-0 lg:px-0">
+      <aside className="hidden w-64 shrink-0 border-r border-[var(--color-line)] bg-[rgba(10,10,15,0.92)] md:block">
+        <div className="sticky top-0 flex h-screen flex-col p-4">
+          {brand}
           {nav}
-          <SecondaryButton className="mt-6 w-full" onClick={() => void logout()}>
+          <SecondaryButton className="mt-auto w-full" onClick={() => void logout()}>
             {t("nav.logout")}
           </SecondaryButton>
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 px-4 py-4 md:px-6 md:py-6">
         <header className="mb-4 flex items-center justify-between md:hidden">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-accent)]">ZimaOS</p>
-            <h1 className="text-base font-semibold">{t("appName")}</h1>
+          <div className="flex items-center gap-3">
+            <img
+              src="/brand/zimaos-backup-manager-icon.png"
+              alt=""
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-[4px] object-cover"
+            />
+            <div>
+              <p className="zbm-logo-text text-sm">ZIMAOS</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">Backup Manager</p>
+            </div>
           </div>
           <button
-            className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-2"
+            className="rounded-[4px] border border-[var(--color-line)] bg-[var(--color-surface)] p-2"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menu"
           >
@@ -90,7 +114,7 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
           </button>
         </header>
         {open && (
-          <div className="mb-4 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4 md:hidden">
+          <div className="zbm-panel mb-4 p-4 md:hidden">
             {nav}
             <SecondaryButton className="mt-4 w-full" onClick={() => void logout()}>
               {t("nav.logout")}

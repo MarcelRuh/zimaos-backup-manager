@@ -1,4 +1,18 @@
-# Changelog\n\n## 0.1.3\n\n- Discord embeds match compact layout (icons, inline fields, HH:MM:SS, German footer)\n\n## 0.1.2
+# Changelog
+
+## 0.1.4
+
+- Dark-Neon UI im Proxora-Stil (Orbitron/Space Grotesk, Pink/Lila/Cyan)
+- Branding: Logo, Favicon, ZimaOS App-Icon, README im Proxora-Layout
+- Security: X-Forwarded-For nur mit `TRUSTED_PROXIES`; ZimaOS-Passwort AES-GCM at rest
+- Discord-Retries respektieren Context; Setup-Rate-Limit; Schedule-Delete 404
+- CI: `govulncheck`; Makefile nutzt `npm ci`
+
+## 0.1.3
+
+- Discord embeds match compact layout (icons, inline fields, HH:MM:SS, German footer)
+
+## 0.1.2
 
 - Auto-login against ZimaOS `POST /v1/users/login` when Docker gets HTTP 401
 - Settings UI for ZimaOS username/password; token refresh without Bearer prefix

@@ -43,6 +43,8 @@ Antwort enthält `data.token.access_token` (temporär; keine permanenten API-Key
 
 Der Backup Manager speichert optional ZimaOS-Benutzername/Passwort und holt bei `401` automatisch ein neues Token. Das Token wird **ohne** `Bearer `-Prefix im `Authorization`-Header gesendet.
 
+Das ZimaOS-Passwort liegt in SQLite nur AES-GCM-verschlüsselt (`enc:v1:…`); der Schlüssel liegt separat unter `DATA_DIR/.encryption-key` (Mode 0600). Verlust der Key-Datei macht gespeicherte Passwörter unlesbar – dann neu setzen.
+
 ## Live-Tests
 
 Automatisierte Tests nutzen HTTP-Fixtures. End-to-End gegen eine reale ZimaCube-Instanz ist umgebungsabhängig und nicht Teil der CI.

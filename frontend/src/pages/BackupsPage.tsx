@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { formatBytes, formatTs, statusTone } from "@/lib/utils";
 import { useLiveRefresh } from "@/hooks/useLiveRefresh";
 import { Button, Card, StatusPill } from "@/components/ui";
+import { EmptyState, PageHeader, ProgressBar } from "@/components/PageHeader";
 import type { Task } from "@/types";
 
 export function BackupsPage() {
@@ -37,12 +38,10 @@ export function BackupsPage() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-semibold">{t("backups.title")}</h2>
+      <PageHeader title={t("backups.title")} />
       {error && <p className="text-sm text-[var(--color-err)]">{error}</p>}
       {tasks.length === 0 ? (
-        <Card>
-          <p className="text-[var(--color-muted)]">{t("backups.empty")}</p>
-        </Card>
+        <EmptyState>{t("backups.empty")}</EmptyState>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {tasks.map((task) => {
@@ -98,12 +97,7 @@ export function BackupsPage() {
                       <span>{t("backups.progress")}</span>
                       <span className="font-mono">{Math.round(progress)}%</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--color-line)]">
-                      <div
-                        className="h-full rounded-full bg-[var(--color-run)] transition-all duration-500"
-                        style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-                      />
-                    </div>
+                    <ProgressBar value={progress} />
                   </div>
                 )}
                 <Button

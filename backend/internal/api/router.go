@@ -4,17 +4,27 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/app"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/static"
 )
 
+const (
+	setupRateLimitWindow = time.Minute
+	setupRateLimitMax    = 10
+)
+
 type Server struct {
 	app *app.App
+
+	setupMu   sync.Mutex
+	setupHits map[string][]time.Time
 }
 
 func NewRouter(application *app.App) http.Handler {
-	s := &Server{app: application}
+	s := &Server{app: application, setupHits: map[string][]time.Time{}}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", s.handleHealth)
@@ -79,4 +89,24 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) allowSetupAttempt(ip string) bool {
+	now := time.Now()
+	cutoff := now.Add(-setupRateLimitWindow)
+	s.setupMu.Lock()
+	defer s.setupMu.Unlock()
+	hits := s.setupHits[ip]
+	kept := hits[:0]
+	for _, t := range hits {
+		if t.After(cutoff) {
+			kept = append(kept, t)
+		}
+	}
+	if len(kept) >= setupRateLimitMax {
+		s.setupHits[ip] = kept
+		return false
+	}
+	s.setupHits[ip] = append(kept, now)
+	return true
 }

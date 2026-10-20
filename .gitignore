@@ -19,6 +19,8 @@ data/
 *.db-journal
 *.db-wal
 *.db-shm
+.encryption-key
+**/.encryption-key
 .env
 .env.local
 .env.*.local

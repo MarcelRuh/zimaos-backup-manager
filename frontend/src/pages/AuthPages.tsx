@@ -94,14 +94,20 @@ export function LoginPage({ onDone }: { onDone: () => void }) {
 }
 
 function AuthShell({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
-  const { t } = useTranslation();
   return (
     <div className="mx-auto flex min-h-screen max-w-md items-center px-4">
       <Card className="w-full">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-accent)]">ZimaOS</p>
-        <h1 className="mt-2 text-2xl font-semibold">{t("appName")}</h1>
-        <h2 className="mt-4 text-lg font-medium">{title}</h2>
-        {hint && <p className="mt-2 text-sm text-[var(--color-muted)]">{hint}</p>}
+        <div className="flex flex-col items-center text-center">
+          <img
+            src="/brand/zimaos-backup-manager-logo.jpg"
+            alt="ZimaOS Backup Manager"
+            width={180}
+            height={180}
+            className="mb-4 h-auto w-[180px] drop-shadow-[0_0_28px_rgba(255,0,110,0.35)]"
+          />
+          <h2 className="text-lg font-medium">{title}</h2>
+          {hint && <p className="mt-2 text-sm text-[var(--color-muted)]">{hint}</p>}
+        </div>
         <div className="mt-6">{children}</div>
       </Card>
     </div>

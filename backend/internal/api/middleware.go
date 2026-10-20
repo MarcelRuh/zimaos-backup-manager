@@ -72,8 +72,9 @@ func (s *Server) requireSetupComplete(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func clientIP(r *http.Request) string {
-	return auth.ClientIP(r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
+func (s *Server) clientIP(r *http.Request) string {
+	trustXFF := auth.IsTrustedProxy(r.RemoteAddr, s.app.Config.TrustedProxies)
+	return auth.ClientIP(r.RemoteAddr, r.Header.Get("X-Forwarded-For"), trustXFF)
 }
 
 func setSessionCookie(w http.ResponseWriter, a *app.App, sessionID string, secure bool) {

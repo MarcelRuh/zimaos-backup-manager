@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { formatBytes, formatTs, statusTone } from "@/lib/utils";
 import { useLiveRefresh } from "@/hooks/useLiveRefresh";
 import { Card, Input, Label, Select, StatusPill } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import type { BackupRun, Task } from "@/types";
 
 export function HistoryPage() {
@@ -37,7 +38,7 @@ export function HistoryPage() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-semibold">{t("history.title")}</h2>
+      <PageHeader title={t("history.title")} />
       <Card className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Select value={taskId} onChange={(e) => setTaskId(e.target.value)}>
           <option value="">
@@ -82,7 +83,7 @@ export function HistoryPage() {
           </thead>
           <tbody>
             {items.map((run) => (
-              <tr key={run.id} className="border-b border-[var(--color-line)] last:border-0">
+              <tr key={run.id} className="border-b border-[var(--color-line)] transition hover:bg-[var(--color-accent-soft)] last:border-0">
                 <td className="px-4 py-3 font-medium">{run.backup_name}</td>
                 <td className="px-4 py-3">
                   <StatusPill tone={statusTone(run.result)} label={run.result} />

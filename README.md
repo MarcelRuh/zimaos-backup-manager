@@ -1,60 +1,68 @@
 # ZimaOS Backup Manager
 
-Zentrale Weboberfläche zur Verwaltung, Steuerung, Überwachung und Automatisierung **bereits vorhandener** ZimaOS-Backups auf ZimaCube / ZimaCube Pro.
+<p align="center">
+  <img src="docs/brand/zimaos-backup-manager-logo.jpg" alt="ZimaOS Backup Manager" width="280">
+</p>
 
-Die Anwendung entwickelt **keine eigene Backup-Engine**. Sie nutzt ausschließlich die integrierte ZimaOS-Backup-API und verändert ZimaOS nicht.
+**Zentrale Weboberfläche** für vorhandene ZimaOS-Backups auf ZimaCube / ZimaCube Pro — starten, überwachen, planen, Discord-Benachrichtigungen. Keine eigene Backup-Engine.
 
-## Funktionen
+[![CI](https://github.com/MarcelRuh/zimaos-backup-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcelRuh/zimaos-backup-manager/actions/workflows/ci.yml)
+[![GHCR](https://img.shields.io/badge/ghcr.io-marcelruh%2Fzimaos--backup--manager-blue?logo=docker)](https://github.com/MarcelRuh/zimaos-backup-manager/pkgs/container/zimaos-backup-manager)
+[![Release](https://img.shields.io/github/v/release/MarcelRuh/zimaos-backup-manager?include_prereleases)](https://github.com/MarcelRuh/zimaos-backup-manager/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+> Status: **v0.1.4** — Dark-Neon UI (Proxora-Familie), Docker/GHCR, ZimaOS App Store Metadaten.
+
+Nutzt ausschließlich die bestätigte ZimaOS-Backup-API. ZimaOS selbst wird nicht verändert.
+
+## Features
 
 - Automatische Erkennung vorhandener Backup-Tasks
 - Dashboard mit Statusübersicht und API-Verbindung
-- Manuelles Starten von Backups inkl. Preflight-Checks
-- Robuste Überwachung mit Zustandsmaschine (kein falscher Erfolg bei altem `completed`)
+- Manuelles Starten inkl. Preflight-Checks
+- Robuste Überwachung (kein falscher Erfolg bei altem `completed`)
 - Zeitpläne (täglich/wöchentlich/monatlich/Cron), Zeitzone konfigurierbar
 - Discord-Webhook-Benachrichtigungen (Erfolg/Fehler)
 - Persistente Historie in SQLite
 - Sichere lokale Anmeldung (Argon2id, HTTP-only Cookies, CSRF, Brute-Force-Schutz)
-- Dark/Light/System, Deutsch/Englisch
+- Dark-Neon UI, Deutsch/Englisch
 - Ein Container, Multi-Arch (`amd64`/`arm64`), GHCR-Release
 
 ## Screenshots
 
-Platzhalter für Screenshots nach dem ersten Release unter `docs/screenshots/`.
+Platzhalter unter `docs/screenshots/` — nach dem nächsten Deploy ergänzen.
 
-## Systemanforderungen
+## Stack
 
-- ZimaOS mit erreichbarer Backup-API
-- Docker / Docker Compose
-- Port `8787` (konfigurierbar)
-- Schreibbares Datenvolume für SQLite
+| Layer | Tech |
+|-------|------|
+| UI | React 19, Vite, Tailwind CSS |
+| API | Go 1.23, SQLite |
+| Runtime | Docker Compose / ZimaOS |
 
 ## Bestätigte ZimaOS-API
-
-Nur diese Endpunkte werden verwendet:
 
 ```http
 GET  /v2/backup/tasks
 POST /v2/backup/tasks/{id}/start
 ```
 
-Details und Einschränkungen: [docs/LIMITATIONS.md](docs/LIMITATIONS.md)
+Login für Container-Zugriff: `POST /v1/users/login`. Details: [docs/LIMITATIONS.md](docs/LIMITATIONS.md)
 
-## Installation mit Docker Compose
-
-1. Repository klonen oder Release-Compose verwenden.
-2. Image: `ghcr.io/marcelruh/zimaos-backup-manager` (nach erstem Release verfügbar).
-3. Starten:
+## Quick start (Docker Compose)
 
 ```bash
+git clone https://github.com/MarcelRuh/zimaos-backup-manager.git
+cd zimaos-backup-manager
 cp .env.example .env
 docker compose up -d
 ```
 
 WebUI: `http://<host>:8787`
 
-### Netzwerk zur ZimaOS-API
+Image: `ghcr.io/marcelruh/zimaos-backup-manager`
 
-Im Container ist `localhost` **nicht** der Host. Die Compose-Dateien setzen:
+### Netzwerk zur ZimaOS-API
 
 ```yaml
 extra_hosts:
@@ -63,67 +71,40 @@ environment:
   ZIMAOS_API_BASE_URL: http://host.docker.internal
 ```
 
-### ZimaOS-API-Login (wichtig bei Docker)
+### ZimaOS-API-Login
 
-Vom Container aus antwortet ZimaOS meist mit `401 Unauthorized`. In **Einstellungen** ZimaOS-Benutzername und -Passwort hinterlegen (oder per `ZIMAOS_API_USERNAME` / `ZIMAOS_API_PASSWORD`). Der Manager meldet sich über `POST /v1/users/login` an und erneuert abgelaufene Tokens automatisch. Optionales manuelles Token: roh eintragen, **ohne** `Bearer `. Secrets erscheinen nie unmaskiert in API-Responses.
+Vom Container aus antwortet ZimaOS meist mit `401`. Unter **Einstellungen** Benutzername/Passwort hinterlegen (oder `ZIMAOS_API_USERNAME` / `ZIMAOS_API_PASSWORD`). Der Manager meldet sich über `/v1/users/login` an und erneuert Tokens automatisch.
 
 ## Installation auf ZimaOS
 
-1. Image muss in GHCR (oder anderer Registry) veröffentlicht sein.
-2. Compose mit `x-casaos`-Metadaten: [deploy/zimaos/docker-compose.yml](deploy/zimaos/docker-compose.yml)
-3. Als Custom-App installieren bzw. später im App Store einreichen.
+Compose mit `x-casaos`-Metadaten: [deploy/zimaos/docker-compose.yml](deploy/zimaos/docker-compose.yml)
 
 ## Ersteinrichtung
 
 1. WebUI öffnen
-2. Administrator-Benutzername und Passwort festlegen (kein Standardpasswort)
-3. Optional ZimaOS-API-URL/Token prüfen
-4. Backups sollten automatisch erscheinen
+2. Administrator anlegen (kein Default-Passwort)
+3. ZimaOS-Zugangsdaten prüfen
+4. Backups erscheinen automatisch
 
 ## Discord
 
-Unter **Benachrichtigungen**:
-
-- Webhook-URL hinterlegen
-- Global und je Task aktivieren
-- Erfolg/Fehler getrennt steuern
-- Testbenachrichtigung senden
-
-Es werden **keine** Fortschrittsmeldungen gesendet. Pro eindeutigem Durchlauf maximal eine Abschlussmeldung.
-
-## Backup-Verwaltung
-
-- **Backups**: Karten mit Quelle/Ziel/Status/Fortschritt, Start-Button
-- **Zeitpläne**: Cron oder Presets, aktivieren/deaktivieren
-- **Historie**: Filter nach Task, Zeitraum, Ergebnis
-- Doppelstarts und parallele Scheduler-Starts pro Task werden verhindert
-- Verpasste Cron-Jobs werden **nicht** unkontrolliert nachgeholt
+Unter **Benachrichtigungen**: Webhook, global/je Task, Erfolg/Fehler, Test senden. Keine Fortschrittsmeldungen — maximal eine Abschlussmeldung pro Durchlauf.
 
 ## Fehlerbehebung
 
 | Symptom | Prüfung |
 |---|---|
 | Keine Tasks | API-URL, Token, Host-Gateway, Firewall |
-| `api_unavailable` | `ZIMAOS_API_BASE_URL`, Token, Host-Erreichbarkeit |
-| Start blockiert | Task läuft bereits / Ziel `is_connected=false` / Task deaktiviert |
-| Discord ohne Nachricht | Webhook gesetzt? Global/Task-Flags? Nur Erfolg/Fehler, kein Progress |
-| Datenbankfehler / `data directory is not writable` | Ab `0.1.1` setzt das Entrypoint die Rechte auf `/data` automatisch. Bei älteren Images auf `0.1.1`/`latest` updaten oder Volume neu anlegen. |
-
-Systemlogs: Einstellungen → System.
-
-## Bekannte Einschränkungen
-
-Siehe [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+| `api_unavailable` | `ZIMAOS_API_BASE_URL`, Login, Host-Erreichbarkeit |
+| Start blockiert | Task läuft / Ziel offline / Task deaktiviert |
+| Discord ohne Nachricht | Webhook + Flags; nur Erfolg/Fehler |
+| `/data` nicht beschreibbar | Image ≥ `0.1.1` (Entrypoint chown) |
 
 ## Sicherheit
 
-- Kein dauerhaftes Default-Passwort
-- Argon2id-Passwort-Hashes
-- HTTP-only Session-Cookies + CSRF
-- Brute-Force-Lockout
-- ZimaOS-API nur serverseitig
-- Kein konfigurierbarer Open-Proxy
-- Secrets (Token/Webhook) nicht im Frontend zurückgeben
+- Argon2id, HTTP-only Cookies, CSRF, Lockout
+- ZimaOS-Passwort at-rest AES-GCM (`DATA_DIR/.encryption-key`)
+- Secrets nicht im Frontend zurückgeben
 - Siehe [SECURITY.md](SECURITY.md)
 
 ## Build für Entwickler
@@ -131,27 +112,17 @@ Siehe [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 Voraussetzungen: Go 1.23+, Node 22+, Docker (optional)
 
 ```bash
-# Backend-Tests
 cd backend && go test ./...
 
-# Frontend
 cd frontend
-npm install
+npm ci
 npm test
-npm run build   # schreibt nach backend/internal/static/dist
+npm run build
 
-# Lokal starten
 cd backend
 set DATA_DIR=../data
 set ZIMAOS_API_BASE_URL=http://127.0.0.1
 go run ./cmd/server
-```
-
-Docker:
-
-```bash
-docker compose build
-docker compose up
 ```
 
 ## Lizenz

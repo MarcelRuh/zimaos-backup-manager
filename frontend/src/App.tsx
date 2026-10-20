@@ -16,7 +16,7 @@ type AuthState = "loading" | "setup" | "login" | "ready";
 
 export default function App() {
   const { i18n } = useTranslation();
-  const { setMode } = useTheme("system");
+  const { setMode } = useTheme("dark");
   const [state, setState] = useState<AuthState>("loading");
 
   async function bootstrap() {
@@ -49,7 +49,18 @@ export default function App() {
   }, [state]);
 
   if (state === "loading") {
-    return <div className="grid min-h-screen place-items-center text-[var(--color-muted)]">Loading…</div>;
+    return (
+      <div className="grid min-h-screen place-items-center gap-4">
+        <img
+          src="/brand/zimaos-backup-manager-icon.png"
+          alt=""
+          width={72}
+          height={72}
+          className="h-[72px] w-[72px] animate-pulse rounded-[4px] object-cover shadow-[0_0_28px_rgba(255,0,110,0.35)]"
+        />
+        <p className="zbm-kicker">Loading</p>
+      </div>
+    );
   }
   if (state === "setup") {
     return <SetupPage onDone={() => setState("ready")} />;

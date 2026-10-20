@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, Select, SecondaryButton } from "@/components/ui";
+import { EmptyState, PageHeader } from "@/components/PageHeader";
 import type { Schedule, Task } from "@/types";
 
 export function SchedulesPage() {
@@ -65,7 +66,7 @@ export function SchedulesPage() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-semibold">{t("schedules.title")}</h2>
+      <PageHeader title={t("schedules.title")} />
       {error && <p className="text-sm text-[var(--color-err)]">{error}</p>}
       <Card>
         <form className="grid gap-3 md:grid-cols-2" onSubmit={(e) => void create(e)}>
@@ -102,9 +103,7 @@ export function SchedulesPage() {
       </Card>
 
       {items.length === 0 ? (
-        <Card>
-          <p className="text-[var(--color-muted)]">{t("schedules.empty")}</p>
-        </Card>
+        <EmptyState>{t("schedules.empty")}</EmptyState>
       ) : (
         <div className="space-y-3">
           {items.map((sch) => (

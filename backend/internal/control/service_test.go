@@ -47,7 +47,7 @@ func TestStartBackupAndRejectDoubleStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	cfg := config.Config{Timezone: "Europe/Berlin", ZimaOSAPIBaseURL: srv.URL}
+	cfg := config.Config{DataDir: dir, Timezone: "Europe/Berlin", ZimaOSAPIBaseURL: srv.URL}
 	settingsStore, err := settings.NewStore(database.SQL, cfg)
 	if err != nil {
 		t.Fatal(err)

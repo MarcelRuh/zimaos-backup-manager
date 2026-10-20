@@ -34,6 +34,10 @@ func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSetupAttempt(s.clientIP(r)) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited")
+		return
+	}
 	var body struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -73,7 +77,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_body")
 		return
 	}
-	sess, err := s.app.Auth.Login(r.Context(), body.Username, body.Password, clientIP(r))
+	sess, err := s.app.Auth.Login(r.Context(), body.Username, body.Password, s.clientIP(r))
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrLockedOut):
@@ -312,7 +316,11 @@ func (s *Server) handleCreateSchedule(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUpdateSchedule(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid_id")
+		return
+	}
 	existing, err := s.app.Schedules.Get(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "not_found")
@@ -347,7 +355,15 @@ func (s *Server) handleUpdateSchedule(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteSchedule(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid_id")
+		return
+	}
+	if _, err := s.app.Schedules.Get(r.Context(), id); err != nil {
+		writeError(w, http.StatusNotFound, "not_found")
+		return
+	}
 	if err := s.app.Schedules.Delete(r.Context(), id); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error")
 		return

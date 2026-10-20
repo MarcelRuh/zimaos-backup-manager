@@ -82,7 +82,9 @@ func (c *Client) SendEmbed(ctx context.Context, webhookURL string, embed Embed) 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			lastErr = err
-			time.Sleep(time.Duration(attempt) * time.Second)
+			if err := sleepCtx(ctx, time.Duration(attempt)*time.Second); err != nil {
+				return err
+			}
 			continue
 		}
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
@@ -92,7 +94,9 @@ func (c *Client) SendEmbed(ctx context.Context, webhookURL string, embed Embed) 
 		c.mu.Unlock()
 		if resp.StatusCode == 429 {
 			lastErr = fmt.Errorf("discord rate limited")
-			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+			if err := sleepCtx(ctx, time.Duration(attempt)*2*time.Second); err != nil {
+				return err
+			}
 			continue
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -237,6 +241,20 @@ func max64(a, b int64) int64 {
 		return a
 	}
 	return b
+}
+
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func isValidWebhookURL(webhookURL string) bool {

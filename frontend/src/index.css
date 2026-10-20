@@ -2,41 +2,59 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Proxora-aligned dark neon tokens; light mode is a muted fallback. */
 @theme {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Orbitron", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --color-bg: #f4f6f8;
-  --color-surface: #ffffff;
-  --color-ink: #14212b;
-  --color-muted: #5b6b78;
-  --color-line: #d7e0e7;
-  --color-accent: #0f766e;
-  --color-accent-soft: #ccfbf1;
-  --color-ok: #15803d;
-  --color-run: #1d4ed8;
-  --color-warn: #a16207;
-  --color-err: #b91c1c;
-  --color-idle: #64748b;
+  --color-bg: #0a0a0f;
+  --color-surface: #0d0d15;
+  --color-ink: #ffffff;
+  --color-muted: #8888aa;
+  --color-line: rgba(131, 56, 236, 0.22);
+  --color-accent: #ff006e;
+  --color-accent-2: #8338ec;
+  --color-accent-3: #00b4d8;
+  --color-accent-soft: rgba(255, 0, 110, 0.12);
+  --color-ok: #06d6a0;
+  --color-run: #00b4d8;
+  --color-warn: #ffd60a;
+  --color-err: #ff5400;
+  --color-idle: #8888aa;
+  --radius-panel: 4px;
 }
 
-.dark {
-  --color-bg: #0b1218;
-  --color-surface: #121c24;
-  --color-ink: #e8eef3;
-  --color-muted: #9aabb8;
-  --color-line: #243341;
-  --color-accent: #2dd4bf;
-  --color-accent-soft: #134e4a;
-  --color-ok: #4ade80;
-  --color-run: #60a5fa;
-  --color-warn: #fbbf24;
-  --color-err: #f87171;
-  --color-idle: #94a3b8;
+:root {
+  color-scheme: dark;
+  --ui-fill: linear-gradient(90deg, #ff006e, #8338ec);
+  --ui-logo-fill: linear-gradient(135deg, #ff006e, #8338ec, #00b4d8);
+  --ui-focus-glow: 0 0 0 2px rgba(255, 0, 110, 0.35);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Optional light mode — still neon-tinted, not the old teal look. */
+html:not(.dark) {
+  color-scheme: light;
+  --color-bg: #f4f0fb;
+  --color-surface: #ffffff;
+  --color-ink: #141022;
+  --color-muted: #5c5678;
+  --color-line: rgba(131, 56, 236, 0.18);
+  --color-accent: #d1005a;
+  --color-accent-2: #6d28d9;
+  --color-accent-3: #0891b2;
+  --color-accent-soft: rgba(209, 0, 90, 0.1);
+  --color-ok: #059669;
+  --color-run: #0284c7;
+  --color-warn: #ca8a04;
+  --color-err: #dc2626;
+  --color-idle: #64748b;
 }
 
 * {
   box-sizing: border-box;
+  border-color: var(--color-line);
 }
 
 html,
@@ -49,10 +67,38 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--color-ink);
+  background: var(--color-bg);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
   background:
-    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--color-accent) 18%, transparent), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, color-mix(in oklab, var(--color-run) 12%, transparent), transparent 50%),
+    radial-gradient(900px 520px at 12% -8%, rgba(255, 0, 110, 0.16), transparent 55%),
+    radial-gradient(800px 480px at 92% 0%, rgba(131, 56, 236, 0.18), transparent 50%),
+    radial-gradient(700px 420px at 70% 100%, rgba(0, 180, 216, 0.1), transparent 55%),
     var(--color-bg);
+}
+
+::selection {
+  background: #ff006e;
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ui-fill);
+  border-radius: 4px;
 }
 
 a {
@@ -78,6 +124,128 @@ textarea {
   }
 }
 
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
 .animate-fade-up {
-  animation: fade-up 280ms ease-out both;
+  animation: fade-up 280ms var(--ease-out) both;
+}
+
+.zbm-logo-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: var(--ui-logo-fill);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.zbm-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.zbm-kicker {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-3);
+  text-shadow: 0 0 18px rgba(0, 180, 216, 0.45);
+}
+
+.zbm-panel {
+  border: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  border-radius: var(--radius-panel);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+
+.zbm-panel:hover {
+  border-color: rgba(131, 56, 236, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.zbm-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ff006e, #8338ec, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.zbm-panel:hover::before {
+  opacity: 0.85;
+}
+
+.zbm-nav-active {
+  color: var(--color-ink) !important;
+  background: var(--color-accent-soft);
+  box-shadow: inset 3px 0 0 #ff006e, 0 0 18px rgba(255, 0, 110, 0.15);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.zbm-btn-primary {
+  background-image: var(--ui-fill);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(255, 0, 110, 0.25);
+}
+
+.zbm-gauge {
+  height: 6px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.zbm-gauge > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff006e, #8338ec, #00b4d8);
+  box-shadow: 0 0 12px rgba(255, 0, 110, 0.45);
+  transition: width 500ms var(--ease-out);
+}
+
+input[type="checkbox"] {
+  accent-color: #ff006e;
+  width: 1rem;
+  height: 1rem;
+}
+
+.zbm-press {
+  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+.zbm-press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .zbm-press:active:not(:disabled) {
+    animation: none;
+    transform: none;
+  }
 }

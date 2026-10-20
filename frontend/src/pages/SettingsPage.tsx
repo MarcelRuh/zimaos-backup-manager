@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, Select } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import type { Settings, Task } from "@/types";
 import type { ThemeMode } from "@/hooks/useTheme";
 import { formatTs } from "@/lib/utils";
@@ -120,7 +121,7 @@ export function SettingsPage({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-semibold">{t("settings.title")}</h2>
+      <PageHeader title={t("settings.title")} />
       {error && <p className="text-sm text-[var(--color-err)]">{error}</p>}
       {message && <p className="text-sm text-[var(--color-ok)]">{message}</p>}
 
@@ -253,7 +254,7 @@ export function SettingsPage({
         )}
         <div className="mt-4 max-h-64 space-y-2 overflow-auto">
           {logs.map((log) => (
-            <div key={log.id} className="rounded-lg border border-[var(--color-line)] px-3 py-2 text-xs">
+            <div key={log.id} className="rounded-[4px] border border-[var(--color-line)] bg-[rgba(0,0,0,0.2)] px-3 py-2 text-xs">
               <span className="font-mono text-[var(--color-muted)]">{formatTs(log.created_at)}</span>{" "}
               <span className="font-semibold">[{log.level}/{log.category}]</span> {log.message}
             </div>

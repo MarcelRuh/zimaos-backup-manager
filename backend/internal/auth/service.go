@@ -212,7 +212,7 @@ func (s *Service) isLockedOut(ctx context.Context, username, ip string) (bool, e
 		SELECT COUNT(*) FROM login_attempts
 		WHERE success = 0 AND created_at >= ?
 		  AND (username = ? COLLATE NOCASE OR ip = ?)
-	`, since, username, normalizeIP(ip)).Scan(&fails)
+	`, since, username, NormalizeIP(ip)).Scan(&fails)
 	if err != nil {
 		return false, err
 	}
@@ -227,7 +227,7 @@ func (s *Service) recordAttempt(ctx context.Context, username, ip string, succes
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO login_attempts(username, ip, success, created_at)
 		VALUES (?, ?, ?, ?)
-	`, username, normalizeIP(ip), flag, time.Now().UTC().Format(time.RFC3339Nano))
+	`, username, NormalizeIP(ip), flag, time.Now().UTC().Format(time.RFC3339Nano))
 	return err
 }
 
@@ -259,7 +259,7 @@ func randomToken(n int) (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func normalizeIP(ip string) string {
+func NormalizeIP(ip string) string {
 	host, _, err := net.SplitHostPort(ip)
 	if err == nil {
 		return host
@@ -267,14 +267,33 @@ func normalizeIP(ip string) string {
 	return ip
 }
 
-func ClientIP(remoteAddr string, xff string) string {
-	if xff != "" {
-		parts := strings.Split(xff, ",")
-		if len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
+// ClientIP returns the client address for rate limiting / lockout.
+// X-Forwarded-For is only honored when trustXFF is true (caller verified a trusted proxy).
+func ClientIP(remoteAddr string, xff string, trustXFF bool) string {
+	if trustXFF {
+		xff = strings.TrimSpace(xff)
+		if xff != "" {
+			parts := strings.Split(xff, ",")
+			if len(parts) > 0 {
+				candidate := strings.TrimSpace(parts[0])
+				if candidate != "" {
+					return candidate
+				}
+			}
 		}
 	}
-	return normalizeIP(remoteAddr)
+	return NormalizeIP(remoteAddr)
+}
+
+// IsTrustedProxy reports whether peerIP is in the allow-list.
+func IsTrustedProxy(peerIP string, trusted []string) bool {
+	peerIP = NormalizeIP(peerIP)
+	for _, t := range trusted {
+		if NormalizeIP(t) == peerIP {
+			return true
+		}
+	}
+	return false
 }
 
 func FormatError(err error) string {

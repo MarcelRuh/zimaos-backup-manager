@@ -7,7 +7,7 @@ frontend-test:
 	cd frontend && npm test
 
 frontend-build:
-	cd frontend && npm run build
+	cd frontend && npm ci --prefer-offline && npm run build
 
 test: backend-test frontend-test
 

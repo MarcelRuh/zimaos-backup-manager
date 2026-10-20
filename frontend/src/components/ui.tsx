@@ -5,7 +5,7 @@ export function Button({ className, ...props }: ButtonHTMLAttributes<HTMLButtonE
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#042f2e]",
+        "zbm-btn-primary zbm-press inline-flex items-center justify-center rounded-[4px] px-4 py-2.5 text-sm font-semibold transition hover:opacity-90 focus-visible:outline-none focus-visible:shadow-[var(--ui-focus-glow)] disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -17,7 +17,7 @@ export function SecondaryButton({ className, ...props }: ButtonHTMLAttributes<HT
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--color-ink)] transition hover:bg-[color-mix(in_oklab,var(--color-surface),var(--color-ink)_4%)] disabled:opacity-50",
+        "zbm-press inline-flex items-center justify-center rounded-[4px] border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--color-ink)] transition hover:border-[rgba(131,56,236,0.45)] hover:bg-[var(--color-accent-soft)] focus-visible:outline-none focus-visible:shadow-[var(--ui-focus-glow)] disabled:opacity-50",
         className,
       )}
       {...props}
@@ -29,7 +29,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        "w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-sm outline-none ring-[var(--color-accent)] focus:ring-2",
+        "w-full rounded-[4px] border border-[rgba(131,56,236,0.45)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-ink)] outline-none focus:shadow-[var(--ui-focus-glow)]",
         className,
       )}
       {...props}
@@ -41,7 +41,7 @@ export function Select({ className, children, ...props }: PropsWithChildren<Sele
   return (
     <select
       className={cn(
-        "w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-sm outline-none ring-[var(--color-accent)] focus:ring-2",
+        "w-full rounded-[4px] border border-[rgba(131,56,236,0.45)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-ink)] outline-none focus:shadow-[var(--ui-focus-glow)]",
         className,
       )}
       {...props}
@@ -53,12 +53,7 @@ export function Select({ className, children, ...props }: PropsWithChildren<Sele
 
 export function Card({ children, className }: PropsWithChildren<{ className?: string }>) {
   return (
-    <section
-      className={cn(
-        "rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[0_10px_30px_-24px_rgba(15,23,42,0.45)] animate-fade-up",
-        className,
-      )}
-    >
+    <section className={cn("zbm-panel animate-fade-up p-5", className)}>
       {children}
     </section>
   );
@@ -72,7 +67,11 @@ export function StatusPill({ tone, label }: { tone: "ok" | "run" | "warn" | "err
     err: "bg-[color-mix(in_oklab,var(--color-err)_18%,transparent)] text-[var(--color-err)]",
     idle: "bg-[color-mix(in_oklab,var(--color-idle)_18%,transparent)] text-[var(--color-idle)]",
   };
-  return <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold", colors[tone])}>{label}</span>;
+  return (
+    <span className={cn("inline-flex rounded-[4px] px-2.5 py-1 text-xs font-semibold uppercase tracking-wide", colors[tone])}>
+      {label}
+    </span>
+  );
 }
 
 export function Label({ children }: PropsWithChildren) {

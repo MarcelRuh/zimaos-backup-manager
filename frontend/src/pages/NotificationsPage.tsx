@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, SecondaryButton } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import type { Settings, Task } from "@/types";
 
 export function NotificationsPage() {
@@ -62,7 +63,7 @@ export function NotificationsPage() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-semibold">{t("notifications.title")}</h2>
+      <PageHeader title={t("notifications.title")} />
       {error && <p className="text-sm text-[var(--color-err)]">{error}</p>}
       {message && <p className="text-sm text-[var(--color-ok)]">{message}</p>}
       <Card>
