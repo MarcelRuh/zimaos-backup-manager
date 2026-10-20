@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-bg: #f4f6f8;
+  --color-surface: #ffffff;
+  --color-ink: #14212b;
+  --color-muted: #5b6b78;
+  --color-line: #d7e0e7;
+  --color-accent: #0f766e;
+  --color-accent-soft: #ccfbf1;
+  --color-ok: #15803d;
+  --color-run: #1d4ed8;
+  --color-warn: #a16207;
+  --color-err: #b91c1c;
+  --color-idle: #64748b;
+}
+
+.dark {
+  --color-bg: #0b1218;
+  --color-surface: #121c24;
+  --color-ink: #e8eef3;
+  --color-muted: #9aabb8;
+  --color-line: #243341;
+  --color-accent: #2dd4bf;
+  --color-accent-soft: #134e4a;
+  --color-ok: #4ade80;
+  --color-run: #60a5fa;
+  --color-warn: #fbbf24;
+  --color-err: #f87171;
+  --color-idle: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--color-accent) 18%, transparent), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in oklab, var(--color-run) 12%, transparent), transparent 50%),
+    var(--color-bg);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 280ms ease-out both;
+}

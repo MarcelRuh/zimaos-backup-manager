@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="ZimaOS Backup Manager">
+  <rect width="128" height="128" rx="28" fill="#0f766e"/>
+  <path d="M36 70c0-16 12-28 28-28s28 12 28 28v18H36V70z" fill="#ccfbf1"/>
+  <rect x="48" y="78" width="32" height="18" rx="4" fill="#042f2e"/>
+  <path d="M64 34v14M54 40l10-10 10 10" stroke="#ecfeff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

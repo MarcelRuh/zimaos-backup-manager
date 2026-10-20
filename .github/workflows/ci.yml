@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          cache-dependency-path: backend/go.sum
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose
+        run: docker compose -f docker-compose.yml config -q
+      - name: Validate ZimaOS compose
+        run: docker compose -f deploy/zimaos/docker-compose.yml config -q
+      - name: Build image
+        run: docker build -t zimaos-backup-manager:ci .
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secret scan (basic)
+        run: |
+          if grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist \
+            'discord.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+|BEGIN (RSA |OPENSSH )?PRIVATE KEY' .; then
+            echo "Potential secret found" >&2
+            exit 1
+          fi
+          echo "No obvious secrets found"

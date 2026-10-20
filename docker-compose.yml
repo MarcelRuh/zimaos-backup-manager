@@ -1,0 +1,36 @@
+name: zimaos-backup-manager
+
+services:
+  zimaos-backup-manager:
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: "0.1.0"
+    container_name: zimaos-backup-manager
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      LISTEN_ADDR: ":8787"
+      DATA_DIR: /data
+      TZ: Europe/Berlin
+      # From inside the container, localhost is the container itself.
+      # host.docker.internal + host-gateway reaches the ZimaOS host API.
+      ZIMAOS_API_BASE_URL: ${ZIMAOS_API_BASE_URL:-http://host.docker.internal}
+      ZIMAOS_API_TOKEN: ${ZIMAOS_API_TOKEN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - zbm-data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  zbm-data:

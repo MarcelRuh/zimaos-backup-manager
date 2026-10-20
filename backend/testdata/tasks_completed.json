@@ -1,0 +1,39 @@
+{
+  "data": [
+    {
+      "id": "4",
+      "name": "AppData",
+      "status": "completed",
+      "last_backup_time": 1792501106,
+      "source": {
+        "device_type": "Zima",
+        "device_subtype": "RAID5",
+        "is_connected": true,
+        "name": "ZimaCube-Pro",
+        "path": "/media/SSD-Storage/AppData"
+      },
+      "subtasks": [
+        {
+          "id": "4",
+          "schedule_type": "manual",
+          "status": "completed",
+          "progress": 100,
+          "speed": 0,
+          "total_files": 1584,
+          "xferred_files": 1584,
+          "total_size": 1007141835,
+          "xferred_size": 1007141835,
+          "updated_at": 1792501106,
+          "error_message": "",
+          "target": {
+            "device_type": "Zima",
+            "device_subtype": "RAID5",
+            "is_connected": true,
+            "name": "ZimaCube-Pro",
+            "path": "/media/RAID5/backup"
+          }
+        }
+      ]
+    }
+  ]
+}

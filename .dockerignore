@@ -1,0 +1,17 @@
+**/.git
+**/node_modules
+**/data
+**/.env
+**/.env.*
+!**/.env.example
+**/coverage
+**/*.db
+**/dist
+frontend/dist
+backend/bin
+**/.DS_Store
+**/Thumbs.db
+**/*.md
+!README.md
+agent-transcripts
+.cursor

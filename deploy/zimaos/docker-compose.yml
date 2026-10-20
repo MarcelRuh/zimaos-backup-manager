@@ -1,0 +1,67 @@
+name: zimaos-backup-manager
+
+services:
+  zimaos-backup-manager:
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.0
+    container_name: zimaos-backup-manager
+    restart: unless-stopped
+    ports:
+      - target: 8787
+        published: "8787"
+        protocol: tcp
+    environment:
+      LISTEN_ADDR: ":8787"
+      DATA_DIR: /data
+      TZ: Europe/Berlin
+      ZIMAOS_API_BASE_URL: http://host.docker.internal
+    volumes:
+      - type: volume
+        source: zbm-data
+        target: /data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  zbm-data:
+
+x-casaos:
+  id: com.zimaos.backup-manager
+  main: zimaos-backup-manager
+  index: /
+  port_map: "8787"
+  scheme: http
+  icon: https://raw.githubusercontent.com/MarcelRuh/zimaos-backup-manager/main/deploy/zimaos/icon.svg
+  title:
+    en_US: ZimaOS Backup Manager
+    de_DE: ZimaOS Backup Manager
+  tagline:
+    en_US: Manage, schedule and monitor native ZimaOS backups
+    de_DE: Native ZimaOS-Backups verwalten, planen und überwachen
+  description:
+    en_US: |
+      Web UI to discover, start, schedule and monitor existing ZimaOS backup tasks.
+      Uses only the official ZimaOS backup API. No separate backup engine.
+    de_DE: |
+      Weboberfläche zum Erkennen, Starten, Planen und Überwachen vorhandener ZimaOS-Backup-Tasks.
+      Nutzt ausschließlich die offizielle ZimaOS-Backup-API. Keine eigene Backup-Engine.
+  author: Silence
+  developer: Silence
+  category: Productivity
+  architectures:
+    - amd64
+    - arm64
+  version: "0.1.0"
+  tips:
+    before_install:
+      en_US: |
+        Ensure the container can reach the ZimaOS host API via host.docker.internal.
+        After install, open the WebUI and complete the admin setup wizard.
+        Optionally configure a ZimaOS API token if localhost auth bypass does not apply.
+      de_DE: |
+        Stelle sicher, dass der Container die ZimaOS-Host-API über host.docker.internal erreicht.
+        Nach der Installation die WebUI öffnen und den Admin-Einrichtungsassistenten abschließen.
+        Optional einen ZimaOS-API-Token hinterlegen, falls Localhost-Auth-Bypass nicht greift.
+  website: https://github.com/MarcelRuh/zimaos-backup-manager
+  repo: https://github.com/MarcelRuh/zimaos-backup-manager
+  support: https://github.com/MarcelRuh/zimaos-backup-manager/issues
+  docs: https://github.com/MarcelRuh/zimaos-backup-manager/blob/main/README.md
