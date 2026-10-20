@@ -22,8 +22,9 @@ jobs:
         run: |
           REF="${GITHUB_REF_NAME}"
           VERSION="${REF#v}"
+          OWNER="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER}/zimaos-backup-manager" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${OWNER}/zimaos-backup-manager" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3

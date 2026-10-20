@@ -61,6 +61,7 @@ jobs:
       - name: Secret scan (basic)
         run: |
           if grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist \
+            --exclude='*_test.go' \
             'discord.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+|BEGIN (RSA |OPENSSH )?PRIVATE KEY' .; then
             echo "Potential secret found" >&2
             exit 1

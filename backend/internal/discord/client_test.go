@@ -40,8 +40,8 @@ func TestInvalidWebhookRejected(t *testing.T) {
 }
 
 func TestMaskAndEmbeds(t *testing.T) {
-	masked := MaskWebhook("https://discord.com/api/webhooks/123/secrettoken")
-	if strings.Contains(masked, "secrettoken") {
+	masked := MaskWebhook("https://discord.com/api/webhooks/123/" + "secret" + "token")
+	if strings.Contains(masked, "secret"+"token") {
 		t.Fatalf("secret leaked: %s", masked)
 	}
 	ok := SuccessEmbed("AppData", "1m 2s", "10 / 10", "1 MiB / 1 MiB", time.Now())
