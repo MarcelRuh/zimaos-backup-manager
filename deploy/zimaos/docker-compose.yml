@@ -30,8 +30,8 @@ x-casaos:
   index: /
   port_map: "8787"
   scheme: http
-  # New filename so ZimaOS/CasaOS drops the cached old teal icon.svg
-  icon: https://raw.githubusercontent.com/MarcelRuh/zimaos-backup-manager/main/deploy/zimaos/app-icon.png?v=0.1.5
+  # Full brand logo (user artwork). jsDelivr + new path to bust CasaOS cache of old teal icon.svg
+  icon: https://cdn.jsdelivr.net/gh/MarcelRuh/zimaos-backup-manager@main/deploy/zimaos/app-icon.jpg?v=20261020
   title:
     en_US: ZimaOS Backup Manager
     de_DE: ZimaOS Backup Manager
