@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.8
 
+- Fix: `compose_backup_docker_missing` — Entrypoint gibt `zbm` die Docker-Socket-GID (root:docker 660)
 - Go 1.27.3 (CI/Dockerfile/`go.mod` toolchain) gegen Stdlib-CVEs in `govulncheck` (u. a. net/http HTTP/2)
 
 ## 0.1.7

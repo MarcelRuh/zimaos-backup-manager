@@ -51,10 +51,14 @@ Nach **erfolgreichem** ZimaOS-Backup (wenn am Task `compose_backup_hook=on_succe
 
 Voraussetzungen (Compose-Mounts):
 
-- Docker-Socket (`/var/run/docker.sock`)
+- Docker-Socket (`/var/run/docker.sock`) — muss als Bind-Mount vorhanden sein
 - AppData RW (z. B. `/DATA/AppData` → `/host/appdata`)
 - CasaOS-Apps RO (z. B. `/var/lib/casaos/apps` → `/host/casaos/apps`)
 - `APPDATA_HOST_ROOT` muss dem Pfad entsprechen, der in `docker inspect` Mounts erscheint (z. B. `/DATA/AppData` oder `/media/SSD-Storage/AppData`)
+
+Fehler `compose_backup_docker_missing`: Socket fehlt oder ist für den App-User nicht lesbar. Der Entrypoint übernimmt kurz als root die Socket-GID in die Gruppe von `zbm` und droppt dann Privilegien. Ohne Socket-Mount in der Compose-Datei hilft kein Rebuild.
+
+Sicherheit: Socket-Zugriff bedeutet volle Docker-API auf dem Host (effektiv root-äquivalent). Nur auf vertrauenswürdigen Homelab-Hosts mounten.
 
 Das ist **kein** Ersatz für das ZimaOS-AppData-Backup selbst und stoppt keine Container. Discord sendet ein **eigenes** Embed für den Compose-Lauf.
 

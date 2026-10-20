@@ -135,15 +135,22 @@ func (s *Service) resolvedComposeHostRoot() string {
 func (s *Service) Status() map[string]any {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	dockerOK := s.dockerClient().Available(ctx)
+	docker := s.dockerClient()
+	dockerErr := docker.Ping(ctx)
+	dockerOK := dockerErr == nil
 	appData := s.resolvedAppDataDir()
 	var projects []Project
 	if dockerOK {
-		projects, _ = DiscoverProjects(ctx, s.dockerClient(), s.resolvedAppDataHostRoot(), appData, s.resolvedComposeHostRoot(), s.resolvedComposeDir())
+		projects, _ = DiscoverProjects(ctx, docker, s.resolvedAppDataHostRoot(), appData, s.resolvedComposeHostRoot(), s.resolvedComposeDir())
+	}
+	var dockerErrMsg any
+	if dockerErr != nil {
+		dockerErrMsg = dockerErr.Error()
 	}
 	return map[string]any{
 		"enabled":           s.settings.GetBool(settings.KeyComposeBackupEnabled),
 		"docker_available":  dockerOK,
+		"docker_error":      dockerErrMsg,
 		"docker_sock":       s.resolvedDockerSock(),
 		"appdata_dir":       appData,
 		"appdata_available": dirExists(appData),
@@ -242,9 +249,11 @@ func (s *Service) Run(ctx context.Context, triggerTaskID, triggerName string) (*
 		return nil, ErrAppDataMissing
 	}
 	docker := s.dockerClient()
-	if !docker.Available(ctx) {
-		_ = s.settings.Set(ctx, settings.KeyComposeBackupLastError, ErrDockerMissing.Error())
-		return nil, ErrDockerMissing
+	if err := docker.Ping(ctx); err != nil {
+		msg := fmt.Sprintf("%s: %v", ErrDockerMissing.Error(), err)
+		_ = s.settings.Set(ctx, settings.KeyComposeBackupLastError, msg)
+		s.logger.Warn("compose backup: docker unavailable", "sock", docker.Sock(), "error", err)
+		return nil, fmt.Errorf("%w: %v", ErrDockerMissing, err)
 	}
 
 	projects, err := DiscoverProjects(ctx, docker, s.resolvedAppDataHostRoot(), appData, s.resolvedComposeHostRoot(), s.resolvedComposeDir())

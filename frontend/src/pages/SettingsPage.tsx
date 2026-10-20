@@ -302,7 +302,12 @@ export function SettingsPage({
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--color-muted)]">Docker</dt>
-              <dd>{composeStatus.docker_available ? t("settings.composeDockerOk") : t("settings.composeDockerMissing")}</dd>
+              <dd className="text-right">
+                {composeStatus.docker_available ? t("settings.composeDockerOk") : t("settings.composeDockerMissing")}
+                {!composeStatus.docker_available && composeStatus.docker_error ? (
+                  <div className="mt-1 font-mono text-xs text-[var(--color-err)]">{composeStatus.docker_error}</div>
+                ) : null}
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--color-muted)]">AppData</dt>

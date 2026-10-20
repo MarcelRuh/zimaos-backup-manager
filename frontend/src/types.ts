@@ -114,6 +114,7 @@ export type ComposeProject = {
 export type ComposeBackupStatus = {
   enabled: boolean;
   docker_available: boolean;
+  docker_error?: string | null;
   docker_sock: string;
   appdata_dir: string;
   appdata_available: boolean;

@@ -94,18 +94,30 @@ func New(sock string) *Client {
 	}
 }
 
-func (c *Client) Available(ctx context.Context) bool {
+func (c *Client) Sock() string {
+	return c.sock
+}
+
+// Ping checks whether the Docker engine answers on the configured socket.
+func (c *Client) Ping(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/"+apiVersion+"/_ping", nil)
 	if err != nil {
-		return false
+		return err
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return false
+		return fmt.Errorf("docker ping %s: %w", c.sock, err)
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
-	return resp.StatusCode >= 200 && resp.StatusCode < 300
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("docker ping %s: http %d", c.sock, resp.StatusCode)
+	}
+	return nil
+}
+
+func (c *Client) Available(ctx context.Context) bool {
+	return c.Ping(ctx) == nil
 }
 
 func (c *Client) ListContainers(ctx context.Context) ([]Container, error) {
