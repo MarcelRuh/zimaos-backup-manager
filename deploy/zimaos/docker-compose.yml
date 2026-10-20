@@ -12,7 +12,7 @@ services:
     environment:
       LISTEN_ADDR: ":8787"
       DATA_DIR: /data
-      TZ: Europe/Berlin
+      TZ: $TZ
       ZIMAOS_API_BASE_URL: http://host.docker.internal
       DOCKER_SOCK: /var/run/docker.sock
       # Adjust APPDATA_HOST_ROOT if your AppData lives elsewhere (e.g. /media/SSD-Storage/AppData)
@@ -21,9 +21,9 @@ services:
       COMPOSE_HOST_ROOT: /var/lib/casaos/apps
       CASAOS_APPS_DIR: /host/casaos/apps
     volumes:
-      # App-eigene Daten wie bei anderen CasaOS-Apps unter AppData
+      # CasaOS ersetzt $AppID (wie bei anderen Store-Apps)
       - type: bind
-        source: /DATA/AppData/com-zimaos-backup-manager
+        source: /DATA/AppData/$AppID
         target: /data
       - type: bind
         source: /var/run/docker.sock
