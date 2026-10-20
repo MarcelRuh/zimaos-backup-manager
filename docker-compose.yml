@@ -2,12 +2,12 @@ name: zimaos-backup-manager
 
 services:
   zimaos-backup-manager:
-    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.4
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.5
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: "0.1.4"
+        VERSION: "0.1.5"
     container_name: zimaos-backup-manager
     restart: unless-stopped
     ports:
@@ -23,8 +23,12 @@ services:
       ZIMAOS_API_PASSWORD: ${ZIMAOS_API_PASSWORD:-}
       ZIMAOS_API_TOKEN: ${ZIMAOS_API_TOKEN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Host path with CasaOS/ZimaOS app compose files (mounted below).
+      CASAOS_APPS_DIR: ${CASAOS_APPS_DIR:-/host/casaos/apps}
     volumes:
       - zbm-data:/data
+      # Read-only: docker-compose.yml of installed apps
+      - ${CASAOS_APPS_HOST_PATH:-/var/lib/casaos/apps}:/host/casaos/apps:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

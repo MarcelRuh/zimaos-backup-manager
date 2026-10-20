@@ -2,7 +2,7 @@ name: zimaos-backup-manager
 
 services:
   zimaos-backup-manager:
-    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.4
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.5
     container_name: zimaos-backup-manager
     restart: unless-stopped
     ports:
@@ -14,10 +14,15 @@ services:
       DATA_DIR: /data
       TZ: Europe/Berlin
       ZIMAOS_API_BASE_URL: http://host.docker.internal
+      CASAOS_APPS_DIR: /host/casaos/apps
     volumes:
       - type: volume
         source: zbm-data
         target: /data
+      - type: bind
+        source: /var/lib/casaos/apps
+        target: /host/casaos/apps
+        read_only: true
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -41,10 +46,10 @@ x-casaos:
   description:
     en_US: |
       Web UI to discover, start, schedule and monitor existing ZimaOS backup tasks.
-      Uses only the official ZimaOS backup API. No separate backup engine.
+      Also archives CasaOS app compose files from /var/lib/casaos/apps into the app data volume.
     de_DE: |
       Weboberfläche zum Erkennen, Starten, Planen und Überwachen vorhandener ZimaOS-Backup-Tasks.
-      Nutzt ausschließlich die offizielle ZimaOS-Backup-API. Keine eigene Backup-Engine.
+      Archiviert zusätzlich CasaOS-Compose-Dateien aus /var/lib/casaos/apps im App-Datenvolume.
   author: Silence
   developer: Silence
   category: Productivity
@@ -56,10 +61,12 @@ x-casaos:
     before_install:
       en_US: |
         Ensure the container can reach the ZimaOS host API via host.docker.internal.
-        After install, open the WebUI, complete the admin setup wizard, then enter your ZimaOS username/password under Settings (Docker requests get HTTP 401 without login).
+        The bind mount /var/lib/casaos/apps (read-only) enables compose-file backups under Settings.
+        After install, open the WebUI, complete admin setup, then enter ZimaOS username/password under Settings.
       de_DE: |
         Stelle sicher, dass der Container die ZimaOS-Host-API über host.docker.internal erreicht.
-        Nach der Installation die WebUI öffnen, den Admin-Einrichtungsassistenten abschließen und unter Einstellungen ZimaOS-Benutzername/Passwort hinterlegen (ohne Login kommt vom Container aus HTTP 401).
+        Der RO-Mount /var/lib/casaos/apps aktiviert Compose-Backups unter Einstellungen.
+        Nach der Installation Admin anlegen und unter Einstellungen ZimaOS-Benutzername/Passwort hinterlegen.
   website: https://github.com/MarcelRuh/zimaos-backup-manager
   repo: https://github.com/MarcelRuh/zimaos-backup-manager
   support: https://github.com/MarcelRuh/zimaos-backup-manager/issues

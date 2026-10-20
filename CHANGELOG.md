@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+- Optional CasaOS compose backup: archives `docker-compose.yml` from `/var/lib/casaos/apps` into `/data/casaos-apps-backups`
+- Settings UI + cron schedule; RO bind mount documented in compose
+
 ## 0.1.4
 
 - Dark-Neon UI im Proxora-Stil (Orbitron/Space Grotesk, Pink/Lila/Cyan)

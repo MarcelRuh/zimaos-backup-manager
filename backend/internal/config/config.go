@@ -18,6 +18,7 @@ const (
 	DefaultSessionCookieName = "zbm_session"
 	DefaultLanguage          = "de"
 	DefaultTheme             = "dark"
+	DefaultCasaOSAppsDir     = "/host/casaos/apps"
 )
 
 type Config struct {
@@ -36,6 +37,8 @@ type Config struct {
 	// TrustedProxies lists peer IPs allowed to set X-Forwarded-For.
 	// Empty (default) means XFF is ignored and RemoteAddr is used.
 	TrustedProxies []string
+	// CasaOSAppsDir is the host apps compose directory (bind-mounted read-only).
+	CasaOSAppsDir string
 }
 
 func LoadFromEnv() (Config, error) {
@@ -64,6 +67,7 @@ func LoadFromEnv() (Config, error) {
 		CookieSecure:      envBoolOr("COOKIE_SECURE", false),
 		AppPublicURL:      strings.TrimRight(os.Getenv("APP_PUBLIC_URL"), "/"),
 		TrustedProxies:    splitCSV(os.Getenv("TRUSTED_PROXIES")),
+		CasaOSAppsDir:     envOr("CASAOS_APPS_DIR", DefaultCasaOSAppsDir),
 	}
 
 	if err := os.MkdirAll(cfg.DataDir, 0o750); err != nil {

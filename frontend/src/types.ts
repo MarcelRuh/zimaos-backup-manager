@@ -82,4 +82,24 @@ export type Settings = {
   discord_notify_success: boolean;
   discord_notify_failure: boolean;
   setup_completed: boolean;
+  compose_backup_enabled: boolean;
+  compose_backup_cron: string;
+  compose_backup_keep: number;
+  compose_backup_last_ok?: string;
+  compose_backup_last_error?: string;
+  compose_backup_last_file?: string;
+  compose_backup_last_apps?: number;
+};
+
+export type ComposeBackupStatus = {
+  enabled: boolean;
+  source_dir: string;
+  source_available: boolean;
+  cron: string;
+  keep: number;
+  last_ok_at?: string | null;
+  last_error?: string | null;
+  last_archive?: string | null;
+  last_app_count: number;
+  archives: { name: string; bytes?: number; modified_at?: string }[];
 };

@@ -50,6 +50,8 @@ func NewRouter(application *app.App) http.Handler {
 	mux.HandleFunc("GET /api/settings", s.requireAuth(s.handleGetSettings))
 	mux.HandleFunc("PUT /api/settings", s.requireAuth(s.handlePutSettings))
 	mux.HandleFunc("POST /api/discord/test", s.requireAuth(s.handleDiscordTest))
+	mux.HandleFunc("GET /api/compose-backup", s.requireAuth(s.handleComposeBackupStatus))
+	mux.HandleFunc("POST /api/compose-backup/run", s.requireAuth(s.handleComposeBackupRun))
 	mux.HandleFunc("GET /api/system", s.requireAuth(s.handleSystem))
 	mux.HandleFunc("GET /api/logs", s.requireAuth(s.handleLogs))
 	mux.HandleFunc("GET /api/events", s.requireAuth(s.handleSSE))

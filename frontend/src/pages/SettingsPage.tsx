@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
-import { Button, Card, Input, Label, Select } from "@/components/ui";
+import { Button, Card, Input, Label, Select, SecondaryButton } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
-import type { Settings, Task } from "@/types";
+import type { ComposeBackupStatus, Settings, Task } from "@/types";
 import type { ThemeMode } from "@/hooks/useTheme";
 import { formatTs } from "@/lib/utils";
 
@@ -36,6 +36,8 @@ export function SettingsPage({
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [composeStatus, setComposeStatus] = useState<ComposeBackupStatus | null>(null);
+  const [composeBusy, setComposeBusy] = useState(false);
   const [token, setToken] = useState("");
   const [zimaPassword, setZimaPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -44,16 +46,18 @@ export function SettingsPage({
   const [error, setError] = useState("");
 
   async function load() {
-    const [s, sys, logItems, taskList] = await Promise.all([
+    const [s, sys, logItems, taskList, compose] = await Promise.all([
       api<Settings>("/api/settings"),
       api<SystemInfo>("/api/system"),
       api<LogItem[]>("/api/logs?limit=50"),
       api<Task[]>("/api/tasks"),
+      api<ComposeBackupStatus>("/api/compose-backup"),
     ]);
     setSettings(s);
     setSystem(sys);
     setLogs(logItems || []);
     setTasks(taskList || []);
+    setComposeStatus(compose);
     onTheme((s.theme as ThemeMode) || "system");
     if (s.language && s.language !== i18n.language) {
       void i18n.changeLanguage(s.language);
@@ -65,8 +69,7 @@ export function SettingsPage({
     void load().catch((e) => setError(e instanceof Error ? e.message : "error"));
   }, []);
 
-  async function save(e: FormEvent) {
-    e.preventDefault();
+  async function saveSettings() {
     if (!settings) return;
     setError("");
     try {
@@ -77,6 +80,9 @@ export function SettingsPage({
         zimaos_api_base_url: settings.zimaos_api_base_url,
         zimaos_username: settings.zimaos_username || "",
         poll_interval_seconds: settings.poll_interval_seconds,
+        compose_backup_enabled: settings.compose_backup_enabled,
+        compose_backup_cron: settings.compose_backup_cron || "0 3 * * *",
+        compose_backup_keep: settings.compose_backup_keep || 14,
       };
       if (token) body.zimaos_api_token = token;
       if (zimaPassword) body.zimaos_password = zimaPassword;
@@ -92,6 +98,11 @@ export function SettingsPage({
     } catch (err) {
       setError(err instanceof Error ? err.message : "error");
     }
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    await saveSettings();
   }
 
   async function changePassword(e: FormEvent) {
@@ -115,6 +126,20 @@ export function SettingsPage({
       body: JSON.stringify({ ...task.prefs, task_id: task.id, enabled: !task.prefs.enabled }),
     });
     await load();
+  }
+
+  async function runComposeBackup() {
+    setComposeBusy(true);
+    setError("");
+    try {
+      await api("/api/compose-backup/run", { method: "POST" });
+      setMessage("compose_backup_ok");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "error");
+    } finally {
+      setComposeBusy(false);
+    }
   }
 
   if (!settings) return <p className="text-[var(--color-muted)]">{t("common.loading")}</p>;
@@ -211,6 +236,83 @@ export function SettingsPage({
             </label>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <h3 className="mb-2 text-lg font-semibold">{t("settings.composeBackup")}</h3>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">{t("settings.composeBackupHint")}</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
+              checked={settings.compose_backup_enabled ?? true}
+              onChange={(e) => setSettings({ ...settings, compose_backup_enabled: e.target.checked })}
+            />
+            {t("settings.composeBackupEnabled")}
+          </label>
+          <div>
+            <Label>{t("settings.composeBackupCron")}</Label>
+            <Input
+              value={settings.compose_backup_cron || "0 3 * * *"}
+              onChange={(e) => setSettings({ ...settings, compose_backup_cron: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>{t("settings.composeBackupKeep")}</Label>
+            <Input
+              type="number"
+              min={1}
+              max={90}
+              value={settings.compose_backup_keep ?? 14}
+              onChange={(e) => setSettings({ ...settings, compose_backup_keep: Number(e.target.value) })}
+            />
+          </div>
+        </div>
+        {composeStatus && (
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-[var(--color-muted)]">{t("settings.composeBackupSource")}</dt>
+              <dd className="truncate font-mono text-xs">{composeStatus.source_dir}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-[var(--color-muted)]">Status</dt>
+              <dd>
+                {composeStatus.source_available ? t("settings.composeBackupAvailable") : t("settings.composeBackupMissing")}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-[var(--color-muted)]">{t("settings.composeBackupLast")}</dt>
+              <dd>
+                {composeStatus.last_ok_at ? formatTs(composeStatus.last_ok_at) : "—"}
+                {composeStatus.last_archive ? ` · ${composeStatus.last_archive}` : ""}
+              </dd>
+            </div>
+            {composeStatus.last_error && (
+              <div className="text-[var(--color-err)]">{composeStatus.last_error}</div>
+            )}
+          </dl>
+        )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" onClick={() => void saveSettings()}>
+            {t("settings.save")}
+          </Button>
+          <SecondaryButton type="button" disabled={composeBusy} onClick={() => void runComposeBackup()}>
+            {t("settings.composeBackupRun")}
+          </SecondaryButton>
+        </div>
+        {composeStatus?.archives?.length ? (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium">{t("settings.composeBackupArchives")}</p>
+            <ul className="space-y-1 font-mono text-xs text-[var(--color-muted)]">
+              {composeStatus.archives.map((a) => (
+                <li key={a.name}>
+                  {a.name}
+                  {a.bytes != null ? ` · ${a.bytes} B` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </Card>
 
       <Card>

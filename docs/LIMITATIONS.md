@@ -45,6 +45,10 @@ Der Backup Manager speichert optional ZimaOS-Benutzername/Passwort und holt bei 
 
 Das ZimaOS-Passwort liegt in SQLite nur AES-GCM-verschlüsselt (`enc:v1:…`); der Schlüssel liegt separat unter `DATA_DIR/.encryption-key` (Mode 0600). Verlust der Key-Datei macht gespeicherte Passwörter unlesbar – dann neu setzen.
 
+## CasaOS Compose-Backup (lokal)
+
+Zusätzlich zu den ZimaOS-Backup-Tasks kann der Manager die Compose-Dateien unter `/var/lib/casaos/apps` als `tar.gz` nach `/data/casaos-apps-backups` archivieren. Dafür ist ein **read-only Bind-Mount** nötig (siehe `docker-compose.yml`). Das ist **kein** Ersatz für AppData- oder Medien-Backups und kein vollständiges System-Backup.
+
 ## Live-Tests
 
 Automatisierte Tests nutzen HTTP-Fixtures. End-to-End gegen eine reale ZimaCube-Instanz ist umgebungsabhängig und nicht Teil der CI.

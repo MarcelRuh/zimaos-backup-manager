@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/auth"
+	"github.com/MarcelRuh/zimaos-backup-manager/internal/composebackup"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/config"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/control"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/db"
@@ -19,21 +20,22 @@ import (
 )
 
 type App struct {
-	Config    config.Config
-	Logger    *slog.Logger
-	DB        *db.DB
-	Settings  *settings.Store
-	Auth      *auth.Service
-	ZimaOS    *zimaos.Client
-	Runs      *store.RunStore
-	Prefs     *store.PrefsStore
-	Schedules *store.ScheduleStore
-	Audit     *store.AuditStore
-	Monitor   *monitor.Service
-	Control   *control.Service
-	Scheduler *scheduler.Scheduler
-	Discord   *discord.Client
-	Hub       *events.Hub
+	Config         config.Config
+	Logger         *slog.Logger
+	DB             *db.DB
+	Settings       *settings.Store
+	Auth           *auth.Service
+	ZimaOS         *zimaos.Client
+	Runs           *store.RunStore
+	Prefs          *store.PrefsStore
+	Schedules      *store.ScheduleStore
+	Audit          *store.AuditStore
+	Monitor        *monitor.Service
+	Control        *control.Service
+	Scheduler      *scheduler.Scheduler
+	ComposeBackup  *composebackup.Service
+	Discord        *discord.Client
+	Hub            *events.Hub
 }
 
 func New(cfg config.Config, logger *slog.Logger) (*App, error) {
@@ -69,34 +71,40 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	mon := monitor.NewService(zClient, runs, prefs, audit, settingsStore, discordClient, hub, logger)
 	ctrl := control.NewService(zClient, mon, runs, prefs, audit)
 	sched := scheduler.New(schedules, ctrl, settingsStore, audit, logger)
+	composeBackup := composebackup.New(cfg.CasaOSAppsDir, cfg.DataDir, settingsStore, audit, logger)
 
 	a := &App{
-		Config:    cfg,
-		Logger:    logger,
-		DB:        database,
-		Settings:  settingsStore,
-		Auth:      authSvc,
-		ZimaOS:    zClient,
-		Runs:      runs,
-		Prefs:     prefs,
-		Schedules: schedules,
-		Audit:     audit,
-		Monitor:   mon,
-		Control:   ctrl,
-		Scheduler: sched,
-		Discord:   discordClient,
-		Hub:       hub,
+		Config:        cfg,
+		Logger:        logger,
+		DB:            database,
+		Settings:      settingsStore,
+		Auth:          authSvc,
+		ZimaOS:        zClient,
+		Runs:          runs,
+		Prefs:         prefs,
+		Schedules:     schedules,
+		Audit:         audit,
+		Monitor:       mon,
+		Control:       ctrl,
+		Scheduler:     sched,
+		ComposeBackup: composeBackup,
+		Discord:       discordClient,
+		Hub:           hub,
 	}
 
 	mon.Start()
 	if err := sched.Start(context.Background()); err != nil {
 		logger.Warn("scheduler start failed", "error", err)
 	}
+	if err := composeBackup.Start(context.Background()); err != nil {
+		logger.Warn("compose backup scheduler start failed", "error", err)
+	}
 	_ = audit.Add(context.Background(), "info", "system", "application started", map[string]any{})
 	return a, nil
 }
 
 func (a *App) Stop() {
+	a.ComposeBackup.Stop()
 	a.Scheduler.Stop()
 	a.Monitor.Stop()
 }

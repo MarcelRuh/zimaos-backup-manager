@@ -11,7 +11,7 @@
 [![Release](https://img.shields.io/github/v/release/MarcelRuh/zimaos-backup-manager?include_prereleases)](https://github.com/MarcelRuh/zimaos-backup-manager/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-> Status: **v0.1.4** — Dark-Neon UI (Proxora-Familie), Docker/GHCR, ZimaOS App Store Metadaten.
+> Status: **v0.1.5** — Dark-Neon UI, optional CasaOS-Compose-Backup, Docker/GHCR.
 
 Nutzt ausschließlich die bestätigte ZimaOS-Backup-API. ZimaOS selbst wird nicht verändert.
 
@@ -26,6 +26,7 @@ Nutzt ausschließlich die bestätigte ZimaOS-Backup-API. ZimaOS selbst wird nich
 - Persistente Historie in SQLite
 - Sichere lokale Anmeldung (Argon2id, HTTP-only Cookies, CSRF, Brute-Force-Schutz)
 - Dark-Neon UI, Deutsch/Englisch
+- Optional: CasaOS-Compose-Dateien (`/var/lib/casaos/apps`) als tar.gz sichern
 - Ein Container, Multi-Arch (`amd64`/`arm64`), GHCR-Release
 
 ## Screenshots

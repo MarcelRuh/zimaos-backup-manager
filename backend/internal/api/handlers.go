@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/auth"
+	"github.com/MarcelRuh/zimaos-backup-manager/internal/composebackup"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/control"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/discord"
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/scheduler"
@@ -408,6 +410,8 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	setBool("discord_enabled", settings.KeyDiscordEnabled)
 	setBool("discord_notify_success", settings.KeyDiscordNotifyOK)
 	setBool("discord_notify_failure", settings.KeyDiscordNotifyFail)
+	setBool("compose_backup_enabled", settings.KeyComposeBackupEnabled)
+	setStr("compose_backup_cron", settings.KeyComposeBackupCron)
 
 	if v, ok := body["poll_interval_seconds"]; ok {
 		switch n := v.(type) {
@@ -433,6 +437,14 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 			updates[settings.KeyDiscordWebhookURL] = url
 		}
 	}
+	if v, ok := body["compose_backup_keep"]; ok {
+		switch n := v.(type) {
+		case float64:
+			if n >= 1 && n <= 90 {
+				updates[settings.KeyComposeBackupKeep] = strconv.Itoa(int(n))
+			}
+		}
+	}
 
 	if err := s.app.Settings.SetMany(r.Context(), updates); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error")
@@ -445,7 +457,37 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		s.app.Settings.Get(settings.KeyZimaOSPassword),
 	)
 	_ = s.app.Scheduler.Reload(r.Context())
+	_ = s.app.ComposeBackup.Reload(r.Context())
 	writeJSON(w, http.StatusOK, s.app.Settings.PublicView())
+}
+
+func (s *Server) handleComposeBackupStatus(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.app.ComposeBackup.Status())
+}
+
+func (s *Server) handleComposeBackupRun(w http.ResponseWriter, r *http.Request) {
+	res, err := s.app.ComposeBackup.Run(r.Context())
+	if err != nil {
+		switch {
+		case errors.Is(err, composebackup.ErrDisabled):
+			writeError(w, http.StatusConflict, "compose_backup_disabled")
+		case errors.Is(err, composebackup.ErrSourceMissing):
+			writeError(w, http.StatusFailedDependency, "compose_backup_source_missing")
+		case errors.Is(err, composebackup.ErrBusy):
+			writeError(w, http.StatusConflict, "compose_backup_busy")
+		default:
+			writeError(w, http.StatusInternalServerError, "compose_backup_failed")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"archive":    filepath.Base(res.ArchivePath),
+		"app_count":  res.AppCount,
+		"file_count": res.FileCount,
+		"bytes":      res.Bytes,
+		"created_at": res.CreatedAt.UTC().Format(time.RFC3339),
+		"status":     s.app.ComposeBackup.Status(),
+	})
 }
 
 func (s *Server) handleDiscordTest(w http.ResponseWriter, r *http.Request) {
