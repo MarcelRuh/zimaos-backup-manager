@@ -8,7 +8,7 @@ RUN npm install
 COPY frontend/ ./
 RUN mkdir -p /src/backend/internal/static/dist && npm run build
 
-FROM golang:1.24-alpine AS backend
+FROM golang:1.27.3-alpine AS backend
 WORKDIR /src
 RUN apk add --no-cache ca-certificates
 COPY backend/go.mod backend/go.sum ./

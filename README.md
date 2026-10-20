@@ -38,7 +38,7 @@ Platzhalter unter `docs/screenshots/` — nach dem nächsten Deploy ergänzen.
 | Layer | Tech |
 |-------|------|
 | UI | React 19, Vite, Tailwind CSS |
-| API | Go 1.24, SQLite |
+| API | Go 1.27, SQLite |
 | Runtime | Docker Compose / ZimaOS |
 
 ## Bestätigte ZimaOS-API
@@ -110,7 +110,7 @@ Unter **Benachrichtigungen**: Webhook, global/je Task, Erfolg/Fehler, Test sende
 
 ## Build für Entwickler
 
-Voraussetzungen: Go 1.24+, Node 22+, Docker (optional)
+Voraussetzungen: Go 1.27+, Node 22+, Docker (optional)
 
 ```bash
 cd backend && go test ./...

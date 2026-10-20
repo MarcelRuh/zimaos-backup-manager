@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Go 1.27.3 (CI/Dockerfile/`go.mod` toolchain) gegen Stdlib-CVEs in `govulncheck` (u. a. net/http HTTP/2)
+
 ## 0.1.7
 
 - Compose→AppData: Docker-Label-Erkennung der Apps, Mapping in den richtigen AppData-Ordner
