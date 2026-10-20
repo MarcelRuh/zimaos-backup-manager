@@ -47,8 +47,8 @@ type webhookPayload struct {
 }
 
 const (
-	ColorGreen = 0x22C55E
-	ColorRed   = 0xEF4444
+	ColorGreen = 0x57F287
+	ColorRed   = 0xED4245
 )
 
 func (c *Client) SendEmbed(ctx context.Context, webhookURL string, embed Embed) error {
@@ -103,22 +103,23 @@ func (c *Client) SendEmbed(ctx context.Context, webhookURL string, embed Embed) 
 	return lastErr
 }
 
-func SuccessEmbed(backupName, duration, files, dataAmount string, completedAt time.Time) Embed {
+// SuccessEmbed matches the compact ZimaOS Backup Discord layout.
+func SuccessEmbed(backupName, taskID, duration, files, dataAmount string, completedAt time.Time, loc *time.Location) Embed {
 	return Embed{
 		Title: "✅ Backup erfolgreich abgeschlossen",
 		Color: ColorGreen,
 		Fields: []EmbedField{
-			{Name: "Backup", Value: backupName},
-			{Name: "Dauer", Value: duration},
-			{Name: "Dateien", Value: files},
-			{Name: "Datenmenge", Value: dataAmount},
+			{Name: "📦 Backup", Value: backupName, Inline: true},
+			{Name: "⏱️ Dauer", Value: duration, Inline: true},
+			{Name: "📁 Dateien", Value: files, Inline: true},
+			{Name: "💾 Datenmenge", Value: dataAmount, Inline: false},
 		},
-		Footer:    &EmbedFooter{Text: "ZimaOS Backup Manager"},
+		Footer:    &EmbedFooter{Text: FormatFooter(taskID, completedAt, loc)},
 		Timestamp: completedAt.UTC().Format(time.RFC3339),
 	}
 }
 
-func FailureEmbed(backupName, duration, files, dataAmount, errMsg string, completedAt time.Time) Embed {
+func FailureEmbed(backupName, taskID, duration, files, dataAmount, errMsg string, completedAt time.Time, loc *time.Location) Embed {
 	if strings.TrimSpace(errMsg) == "" {
 		errMsg = "Keine Fehlermeldung von der ZimaOS-API verfügbar."
 	}
@@ -126,30 +127,116 @@ func FailureEmbed(backupName, duration, files, dataAmount, errMsg string, comple
 		Title: "❌ Backup fehlgeschlagen",
 		Color: ColorRed,
 		Fields: []EmbedField{
-			{Name: "Backup", Value: backupName},
-			{Name: "Dauer", Value: duration},
-			{Name: "Dateien", Value: files},
-			{Name: "Datenmenge", Value: dataAmount},
-			{Name: "Fehlermeldung", Value: truncate(errMsg, 900)},
+			{Name: "📦 Backup", Value: backupName, Inline: true},
+			{Name: "⏱️ Dauer", Value: duration, Inline: true},
+			{Name: "📁 Dateien", Value: files, Inline: true},
+			{Name: "💾 Datenmenge", Value: dataAmount, Inline: false},
+			{Name: "⚠️ Fehlermeldung", Value: truncate(errMsg, 900), Inline: false},
 		},
-		Footer:    &EmbedFooter{Text: "ZimaOS Backup Manager"},
+		Footer:    &EmbedFooter{Text: FormatFooter(taskID, completedAt, loc)},
 		Timestamp: completedAt.UTC().Format(time.RFC3339),
 	}
 }
 
-func TestEmbed() Embed {
+func TestEmbed(loc *time.Location) Embed {
+	now := time.Now()
 	return Embed{
 		Title: "✅ Discord-Verbindung erfolgreich",
 		Color: ColorGreen,
 		Fields: []EmbedField{
-			{Name: "Backup", Value: "Testbenachrichtigung"},
-			{Name: "Dauer", Value: "—"},
-			{Name: "Dateien", Value: "—"},
-			{Name: "Datenmenge", Value: "—"},
+			{Name: "📦 Backup", Value: "Testbenachrichtigung", Inline: true},
+			{Name: "⏱️ Dauer", Value: "00:00:00", Inline: true},
+			{Name: "📁 Dateien", Value: "—", Inline: true},
+			{Name: "💾 Datenmenge", Value: "—", Inline: false},
 		},
-		Footer:    &EmbedFooter{Text: "ZimaOS Backup Manager"},
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Footer:    &EmbedFooter{Text: FormatFooter("test", now, loc)},
+		Timestamp: now.UTC().Format(time.RFC3339),
 	}
+}
+
+// FormatFooter builds: "ZimaOS Backup • Task 4 • heute um 16:34 Uhr"
+func FormatFooter(taskID string, at time.Time, loc *time.Location) string {
+	if loc == nil {
+		loc = time.Local
+	}
+	local := at.In(loc)
+	taskPart := "Task"
+	if strings.TrimSpace(taskID) != "" {
+		taskPart = "Task " + strings.TrimSpace(taskID)
+	}
+	return fmt.Sprintf("ZimaOS Backup • %s • %s", taskPart, formatGermanRelativeTime(local, time.Now().In(loc)))
+}
+
+func formatGermanRelativeTime(at, now time.Time) string {
+	ay, am, ad := at.Date()
+	ny, nm, nd := now.Date()
+	clock := at.Format("15:04")
+	switch {
+	case ay == ny && am == nm && ad == nd:
+		return fmt.Sprintf("heute um %s Uhr", clock)
+	case ay == ny && am == nm && ad == nd-1:
+		return fmt.Sprintf("gestern um %s Uhr", clock)
+	case ay == ny && am == nm && ad == nd+1:
+		return fmt.Sprintf("morgen um %s Uhr", clock)
+	default:
+		return fmt.Sprintf("%02d.%02d.%d um %s Uhr", at.Day(), int(at.Month()), at.Year(), clock)
+	}
+}
+
+// FormatDurationHHMMSS formats milliseconds as 00:00:02.
+func FormatDurationHHMMSS(ms *int64) string {
+	if ms == nil {
+		return "00:00:00"
+	}
+	total := *ms / 1000
+	if total < 0 {
+		total = 0
+	}
+	h := total / 3600
+	m := (total % 3600) / 60
+	s := total % 60
+	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+}
+
+// FormatDataAmount formats transferred/total like "1.01 / 1.01 GiB".
+func FormatDataAmount(xferred, total int64) string {
+	unit, div := pickByteUnit(max64(total, xferred))
+	if div == 1 {
+		return fmt.Sprintf("%d / %d %s", xferred, total, unit)
+	}
+	return fmt.Sprintf("%.2f / %.2f %s", float64(xferred)/float64(div), float64(total)/float64(div), unit)
+}
+
+func FormatFiles(xferred, total int64) string {
+	return fmt.Sprintf("%d / %d", xferred, total)
+}
+
+func pickByteUnit(n int64) (string, int64) {
+	const (
+		kib = 1024
+		mib = 1024 * kib
+		gib = 1024 * mib
+		tib = 1024 * gib
+	)
+	switch {
+	case n >= tib:
+		return "TiB", tib
+	case n >= gib:
+		return "GiB", gib
+	case n >= mib:
+		return "MiB", mib
+	case n >= kib:
+		return "KiB", kib
+	default:
+		return "B", 1
+	}
+}
+
+func max64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func isValidWebhookURL(webhookURL string) bool {

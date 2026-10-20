@@ -438,7 +438,11 @@ func (s *Server) handleDiscordTest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "webhook_missing")
 		return
 	}
-	if err := s.app.Discord.SendEmbed(r.Context(), webhook, discord.TestEmbed()); err != nil {
+	loc, err := time.LoadLocation(s.app.Settings.Get(settings.KeyTimezone))
+	if err != nil {
+		loc = time.Local
+	}
+	if err := s.app.Discord.SendEmbed(r.Context(), webhook, discord.TestEmbed(loc)); err != nil {
 		writeError(w, http.StatusBadGateway, "discord_failed")
 		return
 	}

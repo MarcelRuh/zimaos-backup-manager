@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -303,15 +302,16 @@ func (s *Service) maybeNotify(ctx context.Context, run *store.BackupRun) {
 	if run.EndedAt != nil {
 		end = *run.EndedAt
 	}
-	duration := formatDuration(run.DurationMS)
-	files := fmt.Sprintf("%d / %d", run.XferredFiles, run.TotalFiles)
-	dataAmount := formatBytes(run.XferredSize) + " / " + formatBytes(run.TotalSize)
+	duration := discord.FormatDurationHHMMSS(run.DurationMS)
+	files := discord.FormatFiles(run.XferredFiles, run.TotalFiles)
+	dataAmount := discord.FormatDataAmount(run.XferredSize, run.TotalSize)
+	loc := loadTimezone(s.settings.Get(settings.KeyTimezone))
 
 	switch {
 	case IsNotifySuccess(run.Result) && prefs.NotifySuccess && s.settings.GetBool(settings.KeyDiscordNotifyOK):
-		embed = discord.SuccessEmbed(run.BackupName, duration, files, dataAmount, end)
+		embed = discord.SuccessEmbed(run.BackupName, run.TaskID, duration, files, dataAmount, end, loc)
 	case IsNotifyFailure(run.Result) && prefs.NotifyFailure && s.settings.GetBool(settings.KeyDiscordNotifyFail):
-		embed = discord.FailureEmbed(run.BackupName, duration, files, dataAmount, run.ErrorMessage, end)
+		embed = discord.FailureEmbed(run.BackupName, run.TaskID, duration, files, dataAmount, run.ErrorMessage, end, loc)
 	default:
 		return
 	}
@@ -330,30 +330,13 @@ func (s *Service) maybeNotify(ctx context.Context, run *store.BackupRun) {
 	_ = s.audit.Add(ctx, "info", "discord", "notification sent", map[string]any{"run_id": run.ID})
 }
 
-func formatDuration(ms *int64) string {
-	if ms == nil {
-		return "—"
+func loadTimezone(name string) *time.Location {
+	if name == "" {
+		name = "Europe/Berlin"
 	}
-	d := time.Duration(*ms) * time.Millisecond
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return time.Local
 	}
-	m := int(d.Minutes())
-	sec := int(d.Seconds()) % 60
-	return fmt.Sprintf("%dm %ds", m, sec)
-}
-
-func formatBytes(n int64) string {
-	if n < 1024 {
-		return fmt.Sprintf("%d B", n)
-	}
-	units := []string{"KiB", "MiB", "GiB", "TiB"}
-	v := float64(n)
-	for _, u := range units {
-		v /= 1024
-		if v < 1024 {
-			return fmt.Sprintf("%.2f %s", v, u)
-		}
-	}
-	return fmt.Sprintf("%.2f PiB", v/1024)
+	return loc
 }
