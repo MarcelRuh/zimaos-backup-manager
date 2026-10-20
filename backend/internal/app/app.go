@@ -50,6 +50,15 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 
 	hub := events.NewHub()
 	zClient := zimaos.NewClient(settingsStore.Get(settings.KeyZimaOSAPIBaseURL), settingsStore.Get(settings.KeyZimaOSAPIToken))
+	zClient.Configure(
+		settingsStore.Get(settings.KeyZimaOSAPIBaseURL),
+		settingsStore.Get(settings.KeyZimaOSAPIToken),
+		settingsStore.Get(settings.KeyZimaOSUsername),
+		settingsStore.Get(settings.KeyZimaOSPassword),
+	)
+	zClient.SetTokenPersister(func(ctx context.Context, token string) error {
+		return settingsStore.Set(ctx, settings.KeyZimaOSAPIToken, token)
+	})
 	runs := store.NewRunStore(database.SQL)
 	prefs := store.NewPrefsStore(database.SQL)
 	schedules := store.NewScheduleStore(database.SQL)

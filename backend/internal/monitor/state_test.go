@@ -101,3 +101,37 @@ func TestShortBackupWithoutSawRunningButAdvancedTimestamp(t *testing.T) {
 		t.Fatalf("expected success for short run, got %s", got)
 	}
 }
+
+func TestTransitionAmbiguousWithoutSawRunning(t *testing.T) {
+	obs := Observation{
+		Task: zimaos.Task{
+			Status:         "completed",
+			LastBackupTime: 50,
+			Subtasks:       []zimaos.Subtask{{Status: "completed"}},
+		},
+		APIReachable:       true,
+		BaselineLastBackup: 10,
+		SawRunning:         false,
+		StartedAtUnix:      200,
+	}
+	if got := Transition(obs); got != ResultAmbiguous {
+		t.Fatalf("expected ambiguous, got %s", got)
+	}
+}
+
+func TestTransitionMultipleSubtasksOneRunning(t *testing.T) {
+	obs := Observation{
+		Task: zimaos.Task{
+			Status: "running",
+			Subtasks: []zimaos.Subtask{
+				{Status: "completed", Progress: 100},
+				{Status: "running", Progress: 40},
+			},
+		},
+		APIReachable: true,
+		SawRunning:   true,
+	}
+	if got := Transition(obs); got != ResultRunning {
+		t.Fatalf("expected running with mixed subtasks, got %s", got)
+	}
+}

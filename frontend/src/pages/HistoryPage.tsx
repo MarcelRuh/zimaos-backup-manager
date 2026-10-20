@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { formatBytes, formatTs, statusTone } from "@/lib/utils";
-import { Card, Select, StatusPill } from "@/components/ui";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
+import { Card, Input, Label, Select, StatusPill } from "@/components/ui";
 import type { BackupRun, Task } from "@/types";
 
 export function HistoryPage() {
@@ -11,27 +12,37 @@ export function HistoryPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskId, setTaskId] = useState("");
   const [result, setResult] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    void api<Task[]>("/api/tasks").then(setTasks).catch(() => undefined);
-  }, []);
+  const load = useCallback(async () => {
+    try {
+      const taskList = await api<Task[]>("/api/tasks");
+      setTasks(taskList || []);
+      const q = new URLSearchParams();
+      if (taskId) q.set("task_id", taskId);
+      if (result) q.set("result", result);
+      if (from) q.set("from", new Date(from).toISOString());
+      if (to) q.set("to", new Date(to).toISOString());
+      const d = await api<{ items: BackupRun[] }>(`/api/history?${q}`);
+      setItems(d.items || []);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "error");
+    }
+  }, [taskId, result, from, to]);
 
-  useEffect(() => {
-    const q = new URLSearchParams();
-    if (taskId) q.set("task_id", taskId);
-    if (result) q.set("result", result);
-    void api<{ items: BackupRun[] }>(`/api/history?${q}`)
-      .then((d) => setItems(d.items || []))
-      .catch((e) => setError(e instanceof Error ? e.message : "error"));
-  }, [taskId, result]);
+  useLiveRefresh(load, 10000);
 
   return (
     <div className="space-y-5">
       <h2 className="text-2xl font-semibold">{t("history.title")}</h2>
-      <Card className="grid gap-3 md:grid-cols-2">
+      <Card className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Select value={taskId} onChange={(e) => setTaskId(e.target.value)}>
-          <option value="">{t("history.filterBackup")}: {t("history.all")}</option>
+          <option value="">
+            {t("history.filterBackup")}: {t("history.all")}
+          </option>
           {tasks.map((task) => (
             <option key={task.id} value={task.id}>
               {task.name}
@@ -39,12 +50,22 @@ export function HistoryPage() {
           ))}
         </Select>
         <Select value={result} onChange={(e) => setResult(e.target.value)}>
-          <option value="">{t("history.filterResult")}: {t("history.all")}</option>
+          <option value="">
+            {t("history.filterResult")}: {t("history.all")}
+          </option>
           <option value="success">{t("history.success")}</option>
           <option value="failed">{t("history.failed")}</option>
           <option value="unknown">{t("history.unknown")}</option>
           <option value="ambiguous">ambiguous</option>
         </Select>
+        <div>
+          <Label>{t("history.from")}</Label>
+          <Input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </div>
+        <div>
+          <Label>{t("history.to")}</Label>
+          <Input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
       </Card>
       {error && <p className="text-sm text-[var(--color-err)]">{error}</p>}
       <Card className="overflow-x-auto p-0">
@@ -62,26 +83,30 @@ export function HistoryPage() {
           <tbody>
             {items.map((run) => (
               <tr key={run.id} className="border-b border-[var(--color-line)] last:border-0">
+                <td className="px-4 py-3 font-medium">{run.backup_name}</td>
                 <td className="px-4 py-3">
-                  <div className="font-medium">{run.backup_name}</div>
-                  <div className="text-xs text-[var(--color-muted)]">{run.error_message}</div>
+                  <StatusPill tone={statusTone(run.result)} label={run.result} />
                 </td>
-                <td className="px-4 py-3">
-                  <StatusPill tone={statusTone(run.result === "success" ? "completed" : run.result === "failed" ? "failed" : run.result === "running" ? "running" : "")} label={run.result} />
-                </td>
-                <td className="px-4 py-3 font-mono">
+                <td className="px-4 py-3 font-mono text-xs">
                   {run.duration_ms != null ? `${Math.round(run.duration_ms / 1000)}s` : "—"}
-                  <div className="text-xs text-[var(--color-muted)]">{run.duration_quality}</div>
+                  <span className="ml-1 text-[var(--color-muted)]">({run.duration_quality})</span>
                 </td>
                 <td className="px-4 py-3 font-mono">
-                  {run.xferred_files}/{run.total_files}
+                  {run.xferred_files} / {run.total_files}
                 </td>
                 <td className="px-4 py-3 font-mono">
-                  {formatBytes(run.xferred_size)}/{formatBytes(run.total_size)}
+                  {formatBytes(run.xferred_size)} / {formatBytes(run.total_size)}
                 </td>
                 <td className="px-4 py-3">{formatTs(run.started_at)}</td>
               </tr>
             ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-muted)]">
+                  —
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </Card>

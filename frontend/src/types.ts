@@ -74,6 +74,8 @@ export type Settings = {
   timezone: string;
   zimaos_api_base_url: string;
   zimaos_api_token_set: boolean;
+  zimaos_username: string;
+  zimaos_password_set: boolean;
   poll_interval_seconds: number;
   discord_enabled: boolean;
   discord_webhook_set: boolean;

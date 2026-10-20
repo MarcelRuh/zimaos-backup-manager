@@ -2,7 +2,7 @@ name: zimaos-backup-manager
 
 services:
   zimaos-backup-manager:
-    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.1
+    image: ghcr.io/marcelruh/zimaos-backup-manager:0.1.2
     container_name: zimaos-backup-manager
     restart: unless-stopped
     ports:
@@ -50,17 +50,15 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "0.1.1"
+  version: "0.1.2"
   tips:
     before_install:
       en_US: |
         Ensure the container can reach the ZimaOS host API via host.docker.internal.
-        After install, open the WebUI and complete the admin setup wizard.
-        Optionally configure a ZimaOS API token if localhost auth bypass does not apply.
+        After install, open the WebUI, complete the admin setup wizard, then enter your ZimaOS username/password under Settings (Docker requests get HTTP 401 without login).
       de_DE: |
         Stelle sicher, dass der Container die ZimaOS-Host-API über host.docker.internal erreicht.
-        Nach der Installation die WebUI öffnen und den Admin-Einrichtungsassistenten abschließen.
-        Optional einen ZimaOS-API-Token hinterlegen, falls Localhost-Auth-Bypass nicht greift.
+        Nach der Installation die WebUI öffnen, den Admin-Einrichtungsassistenten abschließen und unter Einstellungen ZimaOS-Benutzername/Passwort hinterlegen (ohne Login kommt vom Container aus HTTP 401).
   website: https://github.com/MarcelRuh/zimaos-backup-manager
   repo: https://github.com/MarcelRuh/zimaos-backup-manager
   support: https://github.com/MarcelRuh/zimaos-backup-manager/issues

@@ -36,6 +36,7 @@ export function SettingsPage({
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [token, setToken] = useState("");
+  const [zimaPassword, setZimaPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -73,12 +74,15 @@ export function SettingsPage({
         theme: settings.theme,
         timezone: settings.timezone,
         zimaos_api_base_url: settings.zimaos_api_base_url,
+        zimaos_username: settings.zimaos_username || "",
         poll_interval_seconds: settings.poll_interval_seconds,
       };
       if (token) body.zimaos_api_token = token;
+      if (zimaPassword) body.zimaos_password = zimaPassword;
       const next = await api<Settings>("/api/settings", { method: "PUT", body: JSON.stringify(body) });
       setSettings(next);
       setToken("");
+      setZimaPassword("");
       onTheme((next.theme as ThemeMode) || "system");
       void i18n.changeLanguage(next.language || "de");
       onLanguage(next.language || "de");
@@ -160,6 +164,25 @@ export function SettingsPage({
             <Input
               value={settings.zimaos_api_base_url}
               onChange={(e) => setSettings({ ...settings, zimaos_api_base_url: e.target.value })}
+            />
+            <p className="mt-2 text-xs text-[var(--color-muted)]">{t("settings.apiAuthHint")}</p>
+          </div>
+          <div>
+            <Label>{t("settings.apiUser")}</Label>
+            <Input
+              value={settings.zimaos_username || ""}
+              onChange={(e) => setSettings({ ...settings, zimaos_username: e.target.value })}
+              autoComplete="username"
+            />
+          </div>
+          <div>
+            <Label>{t("settings.apiPassword")}</Label>
+            <Input
+              type="password"
+              value={zimaPassword}
+              onChange={(e) => setZimaPassword(e.target.value)}
+              placeholder={settings.zimaos_password_set ? "•••••••• (gesetzt)" : ""}
+              autoComplete="current-password"
             />
           </div>
           <div className="md:col-span-2">

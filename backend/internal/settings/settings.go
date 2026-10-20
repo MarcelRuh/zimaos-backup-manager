@@ -16,6 +16,8 @@ const (
 	KeyTimezone          = "timezone"
 	KeyZimaOSAPIBaseURL  = "zimaos_api_base_url"
 	KeyZimaOSAPIToken    = "zimaos_api_token"
+	KeyZimaOSUsername    = "zimaos_username"
+	KeyZimaOSPassword    = "zimaos_password"
 	KeyPollIntervalSec   = "poll_interval_seconds"
 	KeyDiscordWebhookURL = "discord_webhook_url"
 	KeyDiscordEnabled    = "discord_enabled"
@@ -38,6 +40,8 @@ func NewStore(db *sql.DB, cfg config.Config) (*Store, error) {
 		KeyTimezone:          cfg.Timezone,
 		KeyZimaOSAPIBaseURL:  cfg.ZimaOSAPIBaseURL,
 		KeyZimaOSAPIToken:    cfg.ZimaOSAPIToken,
+		KeyZimaOSUsername:    cfg.ZimaOSUsername,
+		KeyZimaOSPassword:    cfg.ZimaOSPassword,
 		KeyPollIntervalSec:   "5",
 		KeyDiscordWebhookURL: "",
 		KeyDiscordEnabled:    "false",
@@ -154,6 +158,8 @@ func (s *Store) PublicView() map[string]any {
 		"timezone":               s.Get(KeyTimezone),
 		"zimaos_api_base_url":    s.Get(KeyZimaOSAPIBaseURL),
 		"zimaos_api_token_set":   s.Get(KeyZimaOSAPIToken) != "",
+		"zimaos_username":        s.Get(KeyZimaOSUsername),
+		"zimaos_password_set":    s.Get(KeyZimaOSPassword) != "",
 		"poll_interval_seconds":  s.GetInt(KeyPollIntervalSec, 5),
 		"discord_enabled":        s.GetBool(KeyDiscordEnabled),
 		"discord_webhook_set":    s.Get(KeyDiscordWebhookURL) != "",

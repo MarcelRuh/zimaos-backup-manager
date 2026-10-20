@@ -31,7 +31,17 @@ Wenn die API keine exakte Startzeit liefert, wird die Dauer als `estimated` geke
 
 ## Auth vom Container aus
 
-CasaOS/ZimaOS überspringen JWT-Prüfungen oft nur für `127.0.0.1` / `::1`. Vom Docker-Bridge-Netz aus kann ein `Authorization`-Token nötig sein.
+CasaOS/ZimaOS überspringen JWT-Prüfungen oft nur für `127.0.0.1` / `::1`. Vom Docker-Bridge-Netz (`host.docker.internal`) kommt typischerweise `401 Unauthorized`.
+
+Bestätigter Login-Endpunkt:
+
+```http
+POST /v1/users/login
+```
+
+Antwort enthält `data.token.access_token` (temporär; keine permanenten API-Keys laut IceWhale).
+
+Der Backup Manager speichert optional ZimaOS-Benutzername/Passwort und holt bei `401` automatisch ein neues Token. Das Token wird **ohne** `Bearer `-Prefix im `Authorization`-Header gesendet.
 
 ## Live-Tests
 

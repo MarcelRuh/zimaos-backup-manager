@@ -42,10 +42,9 @@ export default function App() {
     if (state !== "ready") return;
     const es = new EventSource("/api/events", { withCredentials: true });
     const bump = () => window.dispatchEvent(new CustomEvent("zbm:live"));
-    es.addEventListener("tasks", bump);
-    es.addEventListener("run", bump);
-    es.addEventListener("api_status", bump);
-    es.onmessage = bump;
+    // Backend publishes named SSE as event:message with typed JSON payload.
+    es.addEventListener("message", bump);
+    es.addEventListener("connected", bump);
     return () => es.close();
   }, [state]);
 

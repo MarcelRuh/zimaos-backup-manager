@@ -26,6 +26,8 @@ type Config struct {
 	DatabasePath      string
 	ZimaOSAPIBaseURL  string
 	ZimaOSAPIToken    string
+	ZimaOSUsername    string
+	ZimaOSPassword    string
 	Timezone          string
 	PollInterval      time.Duration
 	SessionCookieName string
@@ -51,6 +53,8 @@ func LoadFromEnv() (Config, error) {
 		DatabasePath:      filepath.Join(absDataDir, "backup-manager.db"),
 		ZimaOSAPIBaseURL:  strings.TrimRight(envOr("ZIMAOS_API_BASE_URL", DefaultZimaOSAPIBaseURL), "/"),
 		ZimaOSAPIToken:    strings.TrimSpace(os.Getenv("ZIMAOS_API_TOKEN")),
+		ZimaOSUsername:    strings.TrimSpace(os.Getenv("ZIMAOS_API_USERNAME")),
+		ZimaOSPassword:    os.Getenv("ZIMAOS_API_PASSWORD"),
 		Timezone:          envOr("TZ", DefaultTimezone),
 		PollInterval:      time.Duration(pollSeconds) * time.Second,
 		SessionCookieName: envOr("SESSION_COOKIE_NAME", DefaultSessionCookieName),

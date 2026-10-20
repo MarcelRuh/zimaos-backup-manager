@@ -63,7 +63,9 @@ environment:
   ZIMAOS_API_BASE_URL: http://host.docker.internal
 ```
 
-Falls die API Auth verlangt (häufig, wenn Real-IP nicht `127.0.0.1` ist), Token in der WebUI oder als `ZIMAOS_API_TOKEN` setzen. Tokens erscheinen niemals unmaskiert in API-Responses.
+### ZimaOS-API-Login (wichtig bei Docker)
+
+Vom Container aus antwortet ZimaOS meist mit `401 Unauthorized`. In **Einstellungen** ZimaOS-Benutzername und -Passwort hinterlegen (oder per `ZIMAOS_API_USERNAME` / `ZIMAOS_API_PASSWORD`). Der Manager meldet sich über `POST /v1/users/login` an und erneuert abgelaufene Tokens automatisch. Optionales manuelles Token: roh eintragen, **ohne** `Bearer `. Secrets erscheinen nie unmaskiert in API-Responses.
 
 ## Installation auf ZimaOS
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 )
 
@@ -46,6 +47,58 @@ func TestListAndStartTasks(t *testing.T) {
 	}
 }
 
+func TestLoginAndRetryOn401(t *testing.T) {
+	var calls atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/users/login", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"token": map[string]any{
+					"access_token": "fresh-token",
+				},
+			},
+		})
+	})
+	mux.HandleFunc("/v2/backup/tasks", func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n == 1 {
+			http.Error(w, `{"message":"Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		if r.Header.Get("Authorization") != "fresh-token" {
+			http.Error(w, "bad token", http.StatusUnauthorized)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []Task{}})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	c := NewClient(srv.URL, "stale")
+	c.Configure(srv.URL, "stale", "admin", "secret")
+	var saved string
+	c.SetTokenPersister(func(ctx context.Context, token string) error {
+		saved = token
+		return nil
+	})
+	tasks, err := c.ListTasks(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tasks) != 0 {
+		t.Fatalf("expected empty, got %#v", tasks)
+	}
+	if saved != "fresh-token" {
+		t.Fatalf("expected persisted token, got %q", saved)
+	}
+}
+
+func TestBearerPrefixStripped(t *testing.T) {
+	if got := normalizeToken("Bearer abc.def"); got != "abc.def" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestUnavailableAPI(t *testing.T) {
 	c := NewClient("http://127.0.0.1:1", "")
 	_, err := c.ListTasks(context.Background())
@@ -57,7 +110,7 @@ func TestUnavailableAPI(t *testing.T) {
 func TestEmptyTaskListAndBadJSON(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v2/backup/tasks", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"data":[]}`))
+		_, _ = w.Write([]byte(`{"data":[]}`))
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -69,7 +122,7 @@ func TestEmptyTaskListAndBadJSON(t *testing.T) {
 
 	mux2 := http.NewServeMux()
 	mux2.HandleFunc("/v2/backup/tasks", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{not-json`))
+		_, _ = w.Write([]byte(`{not-json`))
 	})
 	srv2 := httptest.NewServer(mux2)
 	t.Cleanup(srv2.Close)

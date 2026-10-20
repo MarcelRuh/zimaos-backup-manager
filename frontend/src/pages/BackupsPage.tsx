@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { formatBytes, formatTs, statusTone } from "@/lib/utils";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
 import { Button, Card, StatusPill } from "@/components/ui";
 import type { Task } from "@/types";
 
@@ -11,20 +12,16 @@ export function BackupsPage() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       setTasks(await api<Task[]>("/api/tasks"));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "error");
     }
-  }
-
-  useEffect(() => {
-    void load();
-    const id = window.setInterval(() => void load(), 4000);
-    return () => window.clearInterval(id);
   }, []);
+
+  useLiveRefresh(load, 4000);
 
   async function start(id: string) {
     setBusyId(id);
@@ -58,7 +55,8 @@ export function BackupsPage() {
               task.subtasks && task.subtasks.length
                 ? task.subtasks.reduce((a, s) => a + (s.progress || 0), 0) / task.subtasks.length
                 : 0;
-            const running = statusTone(task.status) === "run" || task.subtasks?.some((s) => statusTone(s.status) === "run");
+            const running =
+              statusTone(task.status) === "run" || task.subtasks?.some((s) => statusTone(s.status) === "run");
             return (
               <Card key={task.id}>
                 <div className="flex items-start justify-between gap-3">

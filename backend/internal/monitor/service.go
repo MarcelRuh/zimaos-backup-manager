@@ -120,7 +120,9 @@ func (s *Service) tick() {
 
 	base := s.settings.Get(settings.KeyZimaOSAPIBaseURL)
 	token := s.settings.Get(settings.KeyZimaOSAPIToken)
-	s.client.Configure(base, token)
+	username := s.settings.Get(settings.KeyZimaOSUsername)
+	password := s.settings.Get(settings.KeyZimaOSPassword)
+	s.client.Configure(base, token, username, password)
 
 	tasks, err := s.client.ListTasks(ctx)
 	if err != nil {

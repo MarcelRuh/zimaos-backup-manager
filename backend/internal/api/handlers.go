@@ -403,8 +403,13 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if v, ok := body["zimaos_api_token"]; ok {
 		if token, ok := v.(string); ok {
-			// empty string clears; omit key to keep existing
 			updates[settings.KeyZimaOSAPIToken] = token
+		}
+	}
+	setStr("zimaos_username", settings.KeyZimaOSUsername)
+	if v, ok := body["zimaos_password"]; ok {
+		if password, ok := v.(string); ok && password != "" {
+			updates[settings.KeyZimaOSPassword] = password
 		}
 	}
 	if v, ok := body["discord_webhook_url"]; ok {
@@ -420,6 +425,8 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	s.app.ZimaOS.Configure(
 		s.app.Settings.Get(settings.KeyZimaOSAPIBaseURL),
 		s.app.Settings.Get(settings.KeyZimaOSAPIToken),
+		s.app.Settings.Get(settings.KeyZimaOSUsername),
+		s.app.Settings.Get(settings.KeyZimaOSPassword),
 	)
 	_ = s.app.Scheduler.Reload(r.Context())
 	writeJSON(w, http.StatusOK, s.app.Settings.PublicView())
