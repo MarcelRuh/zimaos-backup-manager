@@ -1,11 +1,14 @@
 name: Release
 
+# Only tag pushes — avoid a second run when `gh release create` also fires `release: published`.
 on:
-  release:
-    types: [published]
   push:
     tags:
       - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -14,6 +17,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -39,8 +43,11 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          provenance: false
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
             ${{ steps.meta.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

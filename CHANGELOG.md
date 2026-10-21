@@ -1,10 +1,16 @@
 # Changelog
 
+## 0.1.10
+
+- Release-CI: kein Doppel-Build (nur Tag-Push), Timeout 25m, Buildx-Cache
+- Multi-Arch-Image: Go/npm auf Builder-CPU cross-compilieren (kein hängendes QEMU für arm64)
+
 ## 0.1.9
 
 - Compose-Discovery: Quellpfad auch über AppData-Root und Name-Fallbacks (`compose?`)
 - Mit gemountetem docker.sock als root laufen, damit Schreiben in fremde AppData-Ordner klappt (`appdata?`)
 - UI: stale „docker socket not available“ ausblenden; Letzter Sync ohne „OK 0“
+- (GHCR für 0.1.9 nicht erschienen — Builds hingen; Inhalt in 0.1.10)
 
 ## 0.1.8
 
