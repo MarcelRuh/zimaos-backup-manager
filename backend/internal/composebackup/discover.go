@@ -91,11 +91,11 @@ func DiscoverProjects(ctx context.Context, docker Discoverer, appDataHostRoot, a
 		}
 		sort.Strings(members)
 
-		composeLocal := rewritePath(a.composeHost, composeHostRoot, composeLocalRoot)
 		appLocal := ""
 		if appDataLocalRoot != "" && appName != "" {
 			appLocal = path.Join(appDataLocalRoot, appName)
 		}
+		composeLocal := resolveComposeLocal(a.composeHost, a.name, appName, composeHostRoot, composeLocalRoot, appDataHostRoot, appDataLocalRoot)
 		out = append(out, Project{
 			Name:            a.name,
 			ComposeHost:     a.composeHost,
@@ -109,6 +109,53 @@ func DiscoverProjects(ctx context.Context, docker Discoverer, appDataHostRoot, a
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+// resolveComposeLocal maps the host compose path into the container and tries
+// common CasaOS/ZimaOS layouts when the Docker label path does not rewrite cleanly.
+func resolveComposeLocal(composeHost, projectName, appName, composeHostRoot, composeLocalRoot, appDataHostRoot, appDataLocalRoot string) string {
+	var candidates []string
+	add := func(p string) {
+		p = cleanSlash(p)
+		if p == "" {
+			return
+		}
+		for _, existing := range candidates {
+			if existing == p {
+				return
+			}
+		}
+		candidates = append(candidates, p)
+	}
+
+	add(rewritePath(composeHost, composeHostRoot, composeLocalRoot))
+	add(rewritePath(composeHost, appDataHostRoot, appDataLocalRoot))
+
+	names := []string{projectName, appName}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" || name == "." || name == "/" {
+			continue
+		}
+		if composeLocalRoot != "" {
+			add(path.Join(composeLocalRoot, name, "docker-compose.yml"))
+			add(path.Join(composeLocalRoot, name, "compose.yml"))
+		}
+		if appDataLocalRoot != "" {
+			add(path.Join(appDataLocalRoot, name, "docker-compose.yml"))
+			add(path.Join(appDataLocalRoot, name, "compose.yml"))
+		}
+	}
+
+	for _, c := range candidates {
+		if fileReadable(c) {
+			return c
+		}
+	}
+	if len(candidates) > 0 {
+		return candidates[0]
+	}
+	return ""
 }
 
 func appDataNameFromMounts(mounts []dockerapi.Mount, appDataHostRoot string) string {

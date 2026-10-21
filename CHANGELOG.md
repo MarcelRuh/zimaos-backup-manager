@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9
+
+- Compose-Discovery: Quellpfad auch über AppData-Root und Name-Fallbacks (`compose?`)
+- Mit gemountetem docker.sock als root laufen, damit Schreiben in fremde AppData-Ordner klappt (`appdata?`)
+- UI: stale „docker socket not available“ ausblenden; Letzter Sync ohne „OK 0“
+
 ## 0.1.8
 
 - Fix: `compose_backup_docker_missing` — Entrypoint gibt `zbm` die Docker-Socket-GID (root:docker 660)

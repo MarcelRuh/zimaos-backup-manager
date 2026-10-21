@@ -94,3 +94,41 @@ func TestAppDataNameFromMounts(t *testing.T) {
 		t.Fatalf("got %q", name)
 	}
 }
+
+func TestResolveComposeLocalViaAppData(t *testing.T) {
+	root := t.TempDir()
+	appDataLocal := filepath.Join(root, "appdata", "plex")
+	_ = os.MkdirAll(appDataLocal, 0o755)
+	composeInAppData := filepath.Join(appDataLocal, "docker-compose.yml")
+	_ = os.WriteFile(composeInAppData, []byte("services: {}\n"), 0o644)
+
+	// Label points at host AppData path; CasaOS apps mount is empty — resolve via AppData.
+	got := resolveComposeLocal(
+		"/DATA/AppData/plex/docker-compose.yml",
+		"plex", "plex",
+		"/var/lib/casaos/apps", filepath.Join(root, "casaos"),
+		"/DATA/AppData", filepath.Join(root, "appdata"),
+	)
+	if got != filepath.ToSlash(composeInAppData) && cleanSlash(got) != cleanSlash(composeInAppData) {
+		t.Fatalf("got %q want %q", got, composeInAppData)
+	}
+}
+
+func TestResolveComposeLocalFallbackByName(t *testing.T) {
+	root := t.TempDir()
+	composeDir := filepath.Join(root, "casaos", "plex")
+	_ = os.MkdirAll(composeDir, 0o755)
+	composeFile := filepath.Join(composeDir, "docker-compose.yml")
+	_ = os.WriteFile(composeFile, []byte("services: {}\n"), 0o644)
+
+	// Label path does not match configured roots; fall back to name under compose mount.
+	got := resolveComposeLocal(
+		"/some/other/path/docker-compose.yml",
+		"plex", "plex",
+		"/var/lib/casaos/apps", filepath.Join(root, "casaos"),
+		"/DATA/AppData", filepath.Join(root, "appdata"),
+	)
+	if cleanSlash(got) != cleanSlash(composeFile) {
+		t.Fatalf("got %q want %q", got, composeFile)
+	}
+}

@@ -56,7 +56,9 @@ Voraussetzungen (Compose-Mounts):
 - CasaOS-Apps RO (z. B. `/var/lib/casaos/apps` → `/host/casaos/apps`)
 - `APPDATA_HOST_ROOT` muss dem Pfad entsprechen, der in `docker inspect` Mounts erscheint (z. B. `/DATA/AppData` oder `/media/SSD-Storage/AppData`)
 
-Fehler `compose_backup_docker_missing`: Socket fehlt oder ist für den App-User nicht lesbar. Der Entrypoint übernimmt kurz als root die Socket-GID in die Gruppe von `zbm` und droppt dann Privilegien. Ohne Socket-Mount in der Compose-Datei hilft kein Rebuild.
+Fehler `compose_backup_docker_missing`: Socket fehlt (kein Bind-Mount). Mit gemountetem Socket startet der Prozess als **root**, damit Compose-Dateien in typischerweise root-eigene AppData-Ordner geschrieben werden können.
+
+`compose?` in der UI: Quell-`docker-compose.yml` im Container nicht lesbar (CasaOS-Apps-Mount oder Label-Pfad). Status zeigt dann Host- und Local-Pfad.
 
 Sicherheit: Socket-Zugriff bedeutet volle Docker-API auf dem Host (effektiv root-äquivalent). Nur auf vertrauenswürdigen Homelab-Hosts mounten.
 

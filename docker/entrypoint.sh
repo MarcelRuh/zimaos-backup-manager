@@ -4,8 +4,8 @@ set -eu
 DATA_DIR="${DATA_DIR:-/data}"
 DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"
 
-# Match the host docker.sock GID so non-root zbm can talk to the engine
-# (socket is typically root:docker mode 660).
+# Match the host docker.sock GID so a non-root user can talk to the engine
+# (socket is typically root:docker mode 660). Used only when we drop privileges.
 ensure_dockersock_access() {
   sock="$1"
   if [ ! -S "$sock" ]; then
@@ -14,10 +14,6 @@ ensure_dockersock_access() {
   fi
   gid="$(stat -c '%g' "$sock" 2>/dev/null || true)"
   if [ -z "$gid" ] || [ "$gid" = "0" ]; then
-    # root-owned sock: still try mode bits; group 0 is fine if world-readable
-    if [ ! -r "$sock" ]; then
-      echo "warn: docker socket ${sock} is not readable by root (unexpected)" >&2
-    fi
     return 0
   fi
   group_name="$(getent group "$gid" 2>/dev/null | cut -d: -f1 || true)"
@@ -45,11 +41,20 @@ if [ "$(id -u)" = "0" ]; then
     echo "error: cannot create data directory ${DATA_DIR} (check volume mount)" >&2
     exit 1
   fi
-  # Named/bind volumes are often root-owned; reclaim for the non-root app user.
+  # Named/bind volumes are often root-owned; reclaim for the non-root app user
+  # when we drop privileges. Always fix ownership so /data stays usable.
   chown -R zbm:zbm "$DATA_DIR" || {
     echo "error: cannot chown ${DATA_DIR} to zbm:zbm (check volume permissions)" >&2
     exit 1
   }
+
+  # Docker socket ⇒ host-equivalent power; stay root so Compose→AppData can
+  # write into other apps' typically root-owned AppData folders.
+  if [ -S "$DOCKER_SOCK" ]; then
+    echo "info: docker.sock present — running as root for AppData compose sync" >&2
+    exec /usr/local/bin/zimaos-backup-manager "$@"
+  fi
+
   ensure_dockersock_access "$DOCKER_SOCK"
   exec su-exec zbm /usr/local/bin/zimaos-backup-manager "$@"
 fi

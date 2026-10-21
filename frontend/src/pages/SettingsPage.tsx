@@ -323,14 +323,21 @@ export function SettingsPage({
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--color-muted)]">{t("settings.composeBackupLast")}</dt>
               <dd>
-                {composeStatus.last_ok_at ? formatTs(composeStatus.last_ok_at) : "—"}
-                {composeStatus.last_ok_count != null ? ` · OK ${composeStatus.last_ok_count}` : ""}
-                {composeStatus.last_fail_count ? ` · Fail ${composeStatus.last_fail_count}` : ""}
+                {composeStatus.last_ok_at ? (
+                  <>
+                    {formatTs(composeStatus.last_ok_at)}
+                    {` · OK ${composeStatus.last_ok_count ?? 0}`}
+                    {composeStatus.last_fail_count ? ` · Fail ${composeStatus.last_fail_count}` : ""}
+                  </>
+                ) : (
+                  "—"
+                )}
               </dd>
             </div>
-            {composeStatus.last_error && (
+            {composeStatus.last_error &&
+            !(composeStatus.docker_available && /docker socket|docker ping/i.test(composeStatus.last_error)) ? (
               <div className="text-[var(--color-err)]">{composeStatus.last_error}</div>
-            )}
+            ) : null}
           </dl>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
@@ -346,10 +353,16 @@ export function SettingsPage({
             <p className="mb-2 text-sm font-medium">{t("settings.composeProjects")}</p>
             <ul className="space-y-1 font-mono text-xs text-[var(--color-muted)]">
               {composeStatus.projects.slice(0, 12).map((p) => (
-                <li key={p.name + p.compose_host}>
+                <li key={p.name + p.compose_host} className="break-all">
                   {p.name} → AppData/{p.appdata_name}
                   {p.compose_readable ? "" : " · compose?"}
                   {p.appdata_writable ? "" : " · appdata?"}
+                  {!p.compose_readable && p.compose_host ? (
+                    <div className="pl-2 text-[10px] opacity-80">src: {p.compose_host}</div>
+                  ) : null}
+                  {!p.compose_readable && p.compose_local ? (
+                    <div className="pl-2 text-[10px] opacity-80">local: {p.compose_local}</div>
+                  ) : null}
                 </li>
               ))}
             </ul>

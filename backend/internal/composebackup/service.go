@@ -147,6 +147,12 @@ func (s *Service) Status() map[string]any {
 	if dockerErr != nil {
 		dockerErrMsg = dockerErr.Error()
 	}
+	lastErr := strings.TrimSpace(s.settings.Get(settings.KeyComposeBackupLastError))
+	// Drop stale docker errors once the socket is reachable again.
+	if dockerOK && lastErr != "" && (strings.Contains(lastErr, "docker socket") || strings.Contains(lastErr, "docker ping")) {
+		_ = s.settings.Set(ctx, settings.KeyComposeBackupLastError, "")
+		lastErr = ""
+	}
 	return map[string]any{
 		"enabled":           s.settings.GetBool(settings.KeyComposeBackupEnabled),
 		"docker_available":  dockerOK,
@@ -161,7 +167,7 @@ func (s *Service) Status() map[string]any {
 		"project_count":     len(projects),
 		"cron":              s.cronExpr(),
 		"last_ok_at":        nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastOK)),
-		"last_error":        nullIfEmpty(s.settings.Get(settings.KeyComposeBackupLastError)),
+		"last_error":        nullIfEmpty(lastErr),
 		"last_ok_count":     s.settings.GetInt(settings.KeyComposeBackupLastApps, 0),
 		"last_fail_count":   s.settings.GetInt(settings.KeyComposeBackupLastFail, 0),
 	}
