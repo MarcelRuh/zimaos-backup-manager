@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MarcelRuh/zimaos-backup-manager/internal/auth"
@@ -334,6 +335,7 @@ func (s *Server) handleUpdateSchedule(w http.ResponseWriter, r *http.Request) {
 		TaskID   string `json:"task_id"`
 		Name     string `json:"name"`
 		CronExpr string `json:"cron_expr"`
+		Preset   string `json:"preset"`
 		Timezone string `json:"timezone"`
 		Enabled  bool   `json:"enabled"`
 	}
@@ -341,14 +343,34 @@ func (s *Server) handleUpdateSchedule(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_body")
 		return
 	}
-	if err := scheduler.ValidateCron(body.CronExpr); err != nil {
+	cronExpr := strings.TrimSpace(body.CronExpr)
+	if body.Preset != "" {
+		p, err := scheduler.PresetCron(body.Preset)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_preset")
+			return
+		}
+		cronExpr = p
+	}
+	if err := scheduler.ValidateCron(cronExpr); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_cron")
 		return
 	}
-	existing.TaskID = body.TaskID
+	tz := strings.TrimSpace(body.Timezone)
+	if tz == "" {
+		tz = existing.Timezone
+	}
+	if tz == "" {
+		tz = s.app.Settings.Get(settings.KeyTimezone)
+	}
+	taskID := strings.TrimSpace(body.TaskID)
+	if taskID == "" {
+		taskID = existing.TaskID
+	}
+	existing.TaskID = taskID
 	existing.Name = body.Name
-	existing.CronExpr = body.CronExpr
-	existing.Timezone = body.Timezone
+	existing.CronExpr = cronExpr
+	existing.Timezone = tz
 	existing.Enabled = body.Enabled
 	if err := s.app.Schedules.Update(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error")

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12
+
+- Zeitpläne bearbeitbar (Task, Name, Cron/Preset, Aktiv); Formular wechselt in Edit-Modus
+
 ## 0.1.11
 
 - Compose→AppData im Backup-Reiter (nicht mehr Settings); Timing pro Task: vor / nach / beides

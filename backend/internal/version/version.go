@@ -1,4 +1,4 @@
 package version
 
 // Version is injected at build time via -ldflags.
-var Version = "0.1.11"
+var Version = "0.1.12"

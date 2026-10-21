@@ -5,15 +5,43 @@ import { Button, Card, Input, Label, Select, SecondaryButton } from "@/component
 import { EmptyState, PageHeader } from "@/components/PageHeader";
 import type { ComposeBackupHook, Schedule, Task } from "@/types";
 
+type FormState = {
+  taskId: string;
+  name: string;
+  preset: string;
+  cron: string;
+  enabled: boolean;
+};
+
+const emptyForm = (taskId = ""): FormState => ({
+  taskId,
+  name: "",
+  preset: "daily",
+  cron: "",
+  enabled: true,
+});
+
+function matchPreset(cronExpr: string): string {
+  switch (cronExpr) {
+    case "0 3 * * *":
+      return "daily";
+    case "0 3 * * 1":
+      return "weekly";
+    case "0 3 1 * *":
+      return "monthly";
+    default:
+      return "";
+  }
+}
+
 export function SchedulesPage() {
   const { t } = useTranslation();
   const [items, setItems] = useState<Schedule[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [taskId, setTaskId] = useState("");
-  const [preset, setPreset] = useState("daily");
-  const [cron, setCron] = useState("");
-  const [name, setName] = useState("");
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     const [schedules, taskList] = await Promise.all([
@@ -22,14 +50,17 @@ export function SchedulesPage() {
     ]);
     setItems(schedules || []);
     setTasks(taskList || []);
-    if (!taskId && taskList?.[0]) setTaskId(taskList[0].id);
+    setForm((prev) => {
+      if (prev.taskId || !taskList?.[0]) return prev;
+      return { ...prev, taskId: taskList[0].id };
+    });
   }
 
   useEffect(() => {
     void load().catch((e) => setError(e instanceof Error ? e.message : "error"));
   }, []);
 
-  const selectedTask = tasks.find((task) => task.id === taskId);
+  const selectedTask = tasks.find((task) => task.id === form.taskId);
 
   function hookValue(task: Task | undefined): ComposeBackupHook {
     const v = task?.prefs?.compose_backup_hook;
@@ -55,39 +86,85 @@ export function SchedulesPage() {
     }
   }
 
-  async function create(e: FormEvent) {
+  function beginEdit(sch: Schedule) {
+    const preset = matchPreset(sch.cron_expr);
+    setEditingId(sch.id);
+    setForm({
+      taskId: sch.task_id,
+      name: sch.name || "",
+      preset: preset || "daily",
+      cron: preset ? "" : sch.cron_expr,
+      enabled: sch.enabled,
+    });
+    setError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(emptyForm(tasks[0]?.id || ""));
+    setError("");
+  }
+
+  async function save(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setBusy(true);
     try {
-      await api("/api/schedules", {
-        method: "POST",
+      const body = {
+        task_id: form.taskId,
+        name: form.name,
+        preset: form.cron ? "" : form.preset,
+        cron_expr: form.cron || undefined,
+        enabled: form.enabled,
+      };
+      if (editingId != null) {
+        await api(`/api/schedules/${editingId}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+      } else {
+        await api("/api/schedules", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      }
+      cancelEdit();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggle(sch: Schedule) {
+    setError("");
+    try {
+      await api(`/api/schedules/${sch.id}`, {
+        method: "PUT",
         body: JSON.stringify({
-          task_id: taskId,
-          name,
-          preset: cron ? "" : preset,
-          cron_expr: cron || undefined,
-          enabled: true,
+          task_id: sch.task_id,
+          name: sch.name,
+          cron_expr: sch.cron_expr,
+          timezone: sch.timezone,
+          enabled: !sch.enabled,
         }),
       });
-      setName("");
-      setCron("");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "error");
     }
   }
 
-  async function toggle(sch: Schedule) {
-    await api(`/api/schedules/${sch.id}`, {
-      method: "PUT",
-      body: JSON.stringify({ ...sch, enabled: !sch.enabled }),
-    });
-    await load();
-  }
-
   async function remove(id: number) {
-    await api(`/api/schedules/${id}`, { method: "DELETE" });
-    await load();
+    setError("");
+    try {
+      await api(`/api/schedules/${id}`, { method: "DELETE" });
+      if (editingId === id) cancelEdit();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "error");
+    }
   }
 
   function hookLabel(taskIdValue: string) {
@@ -105,15 +182,26 @@ export function SchedulesPage() {
     }
   }
 
+  function taskName(taskIdValue: string) {
+    return tasks.find((task) => task.id === taskIdValue)?.name || taskIdValue;
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader title={t("schedules.title")} />
       {error && <p className="text-sm text-[var(--color-err)]">{error}</p>}
       <Card>
-        <form className="grid gap-3 md:grid-cols-2" onSubmit={(e) => void create(e)}>
+        <h3 className="mb-4 text-lg font-semibold">
+          {editingId != null ? t("schedules.edit") : t("schedules.create")}
+        </h3>
+        <form className="grid gap-3 md:grid-cols-2" onSubmit={(e) => void save(e)}>
           <div>
             <Label>{t("schedules.task")}</Label>
-            <Select value={taskId} onChange={(e) => setTaskId(e.target.value)} required>
+            <Select
+              value={form.taskId}
+              onChange={(e) => setForm({ ...form, taskId: e.target.value })}
+              required
+            >
               {tasks.map((task) => (
                 <option key={task.id} value={task.id}>
                   {task.name}
@@ -122,12 +210,20 @@ export function SchedulesPage() {
             </Select>
           </div>
           <div>
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nightly" />
+            <Label>{t("schedules.name")}</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Nightly"
+            />
           </div>
           <div>
-            <Label>Preset</Label>
-            <Select value={preset} onChange={(e) => setPreset(e.target.value)} disabled={!!cron}>
+            <Label>{t("schedules.preset")}</Label>
+            <Select
+              value={form.preset}
+              onChange={(e) => setForm({ ...form, preset: e.target.value })}
+              disabled={!!form.cron}
+            >
               <option value="daily">daily</option>
               <option value="weekly">weekly</option>
               <option value="monthly">monthly</option>
@@ -135,7 +231,11 @@ export function SchedulesPage() {
           </div>
           <div>
             <Label>{t("schedules.cron")} (custom)</Label>
-            <Input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 3 * * *" />
+            <Input
+              value={form.cron}
+              onChange={(e) => setForm({ ...form, cron: e.target.value })}
+              placeholder="0 3 * * *"
+            />
           </div>
           <div className="md:col-span-2">
             <Label>{t("schedules.composeTiming")}</Label>
@@ -151,8 +251,25 @@ export function SchedulesPage() {
             </Select>
             <p className="mt-1 text-xs text-[var(--color-muted)]">{t("schedules.composeTimingHint")}</p>
           </div>
-          <div className="md:col-span-2">
-            <Button type="submit">{t("schedules.create")}</Button>
+          {editingId != null && (
+            <label className="flex items-center gap-2 text-sm md:col-span-2">
+              <input
+                type="checkbox"
+                checked={form.enabled}
+                onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+              />
+              {t("schedules.enabled")}
+            </label>
+          )}
+          <div className="flex flex-wrap gap-2 md:col-span-2">
+            <Button type="submit" disabled={busy || !form.taskId}>
+              {editingId != null ? t("schedules.save") : t("schedules.create")}
+            </Button>
+            {editingId != null && (
+              <SecondaryButton type="button" onClick={cancelEdit}>
+                {t("common.cancel")}
+              </SecondaryButton>
+            )}
           </div>
         </form>
       </Card>
@@ -162,21 +279,33 @@ export function SchedulesPage() {
       ) : (
         <div className="space-y-3">
           {items.map((sch) => (
-            <Card key={sch.id} className="flex flex-wrap items-center justify-between gap-3">
+            <Card
+              key={sch.id}
+              className={`flex flex-wrap items-center justify-between gap-3 ${
+                editingId === sch.id ? "ring-1 ring-[var(--color-accent)]" : ""
+              }`}
+            >
               <div>
                 <p className="font-semibold">{sch.name || sch.cron_expr}</p>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">{taskName(sch.task_id)}</p>
                 <p className="mt-1 font-mono text-xs text-[var(--color-muted)]">
-                  task {sch.task_id} · {sch.cron_expr} · {sch.timezone}
+                  {sch.cron_expr} · {sch.timezone}
+                  {sch.enabled ? "" : ` · ${t("schedules.disabled")}`}
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
                   {t("schedules.composeTiming")}: {hookLabel(sch.task_id)}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <SecondaryButton onClick={() => void toggle(sch)}>
-                  {sch.enabled ? "On" : "Off"}
+              <div className="flex flex-wrap gap-2">
+                <SecondaryButton type="button" onClick={() => beginEdit(sch)}>
+                  {t("schedules.edit")}
                 </SecondaryButton>
-                <SecondaryButton onClick={() => void remove(sch.id)}>Delete</SecondaryButton>
+                <SecondaryButton type="button" onClick={() => void toggle(sch)}>
+                  {sch.enabled ? t("schedules.disable") : t("schedules.enable")}
+                </SecondaryButton>
+                <SecondaryButton type="button" onClick={() => void remove(sch.id)}>
+                  {t("schedules.delete")}
+                </SecondaryButton>
               </div>
             </Card>
           ))}
