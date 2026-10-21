@@ -100,7 +100,8 @@ func (s *Scheduler) Reload(ctx context.Context) error {
 }
 
 func (s *Scheduler) trigger(sch store.Schedule) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// Allow compose→AppData before backup (can take a couple of minutes).
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
 	now := time.Now().UTC()
 	_ = s.schedules.MarkTriggered(ctx, sch.ID, now)

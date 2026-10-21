@@ -222,6 +222,17 @@ func (s *Service) Reload(ctx context.Context) error {
 	return nil
 }
 
+// RunBeforeBackup syncs compose into AppData so the upcoming ZimaOS backup can include them.
+// When Compose→AppData is globally disabled, this is a no-op.
+func (s *Service) RunBeforeBackup(ctx context.Context, taskID, backupName string) error {
+	if !s.settings.GetBool(settings.KeyComposeBackupEnabled) {
+		return nil
+	}
+	res, err := s.Run(ctx, taskID, backupName)
+	s.notifyDiscord(ctx, res, err, taskID, backupName)
+	return err
+}
+
 // RunAfterBackupSuccess syncs compose files into AppData and sends a Discord embed.
 func (s *Service) RunAfterBackupSuccess(ctx context.Context, taskID, backupName string) {
 	if !s.settings.GetBool(settings.KeyComposeBackupEnabled) {

@@ -60,7 +60,7 @@ func TestStartBackupAndRejectDoubleStart(t *testing.T) {
 	audit := store.NewAuditStore(database.SQL)
 	hub := events.NewHub()
 	mon := monitor.NewService(client, runs, prefs, audit, settingsStore, discord.NewClient(), hub, slog.Default(), nil)
-	ctrl := NewService(client, mon, runs, prefs, audit)
+	ctrl := NewService(client, mon, runs, prefs, audit, nil)
 
 	run, msg, err := ctrl.StartBackup(context.Background(), "4")
 	if err != nil || run == nil || msg == "" {

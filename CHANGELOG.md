@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.11
+
+- Compose→AppData im Backup-Reiter (nicht mehr Settings); Timing pro Task: vor / nach / beides
+- „Vor dem Backup“ sync’t Compose in AppData, bevor ZimaOS startet (auch Zeitpläne)
+- Zeitplan-UI zeigt/ändert dieselbe Task-Compose-Einstellung
+
 ## 0.1.10
 
 - Release-CI: kein Doppel-Build (nur Tag-Push), Timeout 25m, Buildx-Cache

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, Select, SecondaryButton } from "@/components/ui";
 import { EmptyState, PageHeader } from "@/components/PageHeader";
-import type { Schedule, Task } from "@/types";
+import type { ComposeBackupHook, Schedule, Task } from "@/types";
 
 export function SchedulesPage() {
   const { t } = useTranslation();
@@ -28,6 +28,32 @@ export function SchedulesPage() {
   useEffect(() => {
     void load().catch((e) => setError(e instanceof Error ? e.message : "error"));
   }, []);
+
+  const selectedTask = tasks.find((task) => task.id === taskId);
+
+  function hookValue(task: Task | undefined): ComposeBackupHook {
+    const v = task?.prefs?.compose_backup_hook;
+    if (v === "before" || v === "on_success" || v === "both") return v;
+    return "off";
+  }
+
+  async function updateComposeHook(value: ComposeBackupHook) {
+    if (!selectedTask) return;
+    setError("");
+    try {
+      await api(`/api/tasks/${selectedTask.id}/prefs`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ...selectedTask.prefs,
+          task_id: selectedTask.id,
+          compose_backup_hook: value,
+        }),
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "error");
+    }
+  }
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -64,6 +90,21 @@ export function SchedulesPage() {
     await load();
   }
 
+  function hookLabel(taskIdValue: string) {
+    const task = tasks.find((item) => item.id === taskIdValue);
+    const hook = hookValue(task);
+    switch (hook) {
+      case "before":
+        return t("backups.composeTimingBefore");
+      case "on_success":
+        return t("backups.composeTimingAfter");
+      case "both":
+        return t("backups.composeTimingBoth");
+      default:
+        return t("backups.composeTimingOff");
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader title={t("schedules.title")} />
@@ -97,6 +138,20 @@ export function SchedulesPage() {
             <Input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 3 * * *" />
           </div>
           <div className="md:col-span-2">
+            <Label>{t("schedules.composeTiming")}</Label>
+            <Select
+              value={hookValue(selectedTask)}
+              onChange={(e) => void updateComposeHook(e.target.value as ComposeBackupHook)}
+              disabled={!selectedTask}
+            >
+              <option value="off">{t("backups.composeTimingOff")}</option>
+              <option value="before">{t("backups.composeTimingBefore")}</option>
+              <option value="on_success">{t("backups.composeTimingAfter")}</option>
+              <option value="both">{t("backups.composeTimingBoth")}</option>
+            </Select>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">{t("schedules.composeTimingHint")}</p>
+          </div>
+          <div className="md:col-span-2">
             <Button type="submit">{t("schedules.create")}</Button>
           </div>
         </form>
@@ -112,6 +167,9 @@ export function SchedulesPage() {
                 <p className="font-semibold">{sch.name || sch.cron_expr}</p>
                 <p className="mt-1 font-mono text-xs text-[var(--color-muted)]">
                   task {sch.task_id} · {sch.cron_expr} · {sch.timezone}
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  {t("schedules.composeTiming")}: {hookLabel(sch.task_id)}
                 </p>
               </div>
               <div className="flex gap-2">

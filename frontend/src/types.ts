@@ -21,7 +21,7 @@ export type Subtask = {
   target: Device;
 };
 
-export type ComposeBackupHook = "off" | "on_success";
+export type ComposeBackupHook = "off" | "before" | "on_success" | "both";
 
 export type TaskPrefs = {
   task_id: string;

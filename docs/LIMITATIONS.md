@@ -47,7 +47,7 @@ Das ZimaOS-Passwort liegt in SQLite nur AES-GCM-verschlüsselt (`enc:v1:…`); d
 
 ## Compose → AppData (nach ZimaOS-Backup)
 
-Nach **erfolgreichem** ZimaOS-Backup (wenn am Task `compose_backup_hook=on_success` gesetzt ist) erkennt der Manager Docker-Compose-Projekte über Labels (`com.docker.compose.project.config_files`) und schreibt `docker-compose.yml` in den zugehörigen AppData-Ordner.
+Pro Backup-Task (Reiter **Backups** / **Zeitpläne**) kann Compose→AppData laufen: `before` (vor dem Start, landet im aktuellen Backup), `on_success` (nach Erfolg), `both`, oder `off`. Zeitpläne nutzen dieselbe Task-Einstellung.
 
 Voraussetzungen (Compose-Mounts):
 

@@ -76,7 +76,7 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 		ComposeHostRoot: cfg.ComposeHostRoot,
 	}, settingsStore, audit, discordClient, logger)
 	mon := monitor.NewService(zClient, runs, prefs, audit, settingsStore, discordClient, hub, logger, composeBackup)
-	ctrl := control.NewService(zClient, mon, runs, prefs, audit)
+	ctrl := control.NewService(zClient, mon, runs, prefs, audit, composeBackup)
 	sched := scheduler.New(schedules, ctrl, settingsStore, audit, logger)
 
 	a := &App{

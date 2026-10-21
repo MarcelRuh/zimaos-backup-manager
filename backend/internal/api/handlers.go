@@ -197,6 +197,8 @@ func (s *Server) handleStartTask(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, "target_offline")
 		case errors.Is(err, control.ErrTaskDisabled):
 			writeError(w, http.StatusForbidden, "task_disabled")
+		case errors.Is(err, control.ErrComposeBeforeFailed):
+			writeError(w, http.StatusFailedDependency, "compose_before_failed")
 		case errors.Is(err, control.ErrAPIDown), errors.Is(err, zimaos.ErrUnavailable):
 			writeError(w, http.StatusBadGateway, "api_unavailable")
 		case errors.Is(err, zimaos.ErrNotFound):

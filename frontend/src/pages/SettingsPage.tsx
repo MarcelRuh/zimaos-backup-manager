@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
-import { Button, Card, Input, Label, Select, SecondaryButton } from "@/components/ui";
+import { Button, Card, Input, Label, Select } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
-import type { ComposeBackupHook, ComposeBackupStatus, Settings, Task } from "@/types";
+import type { Settings, Task } from "@/types";
 import type { ThemeMode } from "@/hooks/useTheme";
 import { formatTs } from "@/lib/utils";
 
@@ -36,8 +36,6 @@ export function SettingsPage({
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [composeStatus, setComposeStatus] = useState<ComposeBackupStatus | null>(null);
-  const [composeBusy, setComposeBusy] = useState(false);
   const [token, setToken] = useState("");
   const [zimaPassword, setZimaPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -46,18 +44,16 @@ export function SettingsPage({
   const [error, setError] = useState("");
 
   async function load() {
-    const [s, sys, logItems, taskList, compose] = await Promise.all([
+    const [s, sys, logItems, taskList] = await Promise.all([
       api<Settings>("/api/settings"),
       api<SystemInfo>("/api/system"),
       api<LogItem[]>("/api/logs?limit=50"),
       api<Task[]>("/api/tasks"),
-      api<ComposeBackupStatus>("/api/compose-backup"),
     ]);
     setSettings(s);
     setSystem(sys);
     setLogs(logItems || []);
     setTasks(taskList || []);
-    setComposeStatus(compose);
     onTheme((s.theme as ThemeMode) || "system");
     if (s.language && s.language !== i18n.language) {
       void i18n.changeLanguage(s.language);
@@ -80,12 +76,6 @@ export function SettingsPage({
         zimaos_api_base_url: settings.zimaos_api_base_url,
         zimaos_username: settings.zimaos_username || "",
         poll_interval_seconds: settings.poll_interval_seconds,
-        compose_backup_enabled: settings.compose_backup_enabled,
-        compose_backup_cron: settings.compose_backup_cron || "0 3 * * *",
-        compose_backup_appdata_dir: settings.compose_backup_appdata_dir ?? "",
-        compose_backup_appdata_host_root: settings.compose_backup_appdata_host_root ?? "",
-        compose_backup_compose_dir: settings.compose_backup_compose_dir ?? "",
-        compose_backup_compose_host_root: settings.compose_backup_compose_host_root ?? "",
       };
       if (token) body.zimaos_api_token = token;
       if (zimaPassword) body.zimaos_password = zimaPassword;
@@ -123,26 +113,12 @@ export function SettingsPage({
     }
   }
 
-  async function updateTaskPrefs(task: Task, patch: Partial<Task["prefs"]>) {
+  async function updateTaskPrefs(task: Task, patch: Partial<NonNullable<Task["prefs"]>>) {
     await api(`/api/tasks/${task.id}/prefs`, {
       method: "PUT",
       body: JSON.stringify({ ...task.prefs, ...patch, task_id: task.id }),
     });
     await load();
-  }
-
-  async function runComposeBackup() {
-    setComposeBusy(true);
-    setError("");
-    try {
-      await api("/api/compose-backup/run", { method: "POST" });
-      setMessage("compose_backup_ok");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "error");
-    } finally {
-      setComposeBusy(false);
-    }
   }
 
   if (!settings) return <p className="text-[var(--color-muted)]">{t("common.loading")}</p>;
@@ -231,9 +207,13 @@ export function SettingsPage({
 
       <Card>
         <h3 className="mb-4 text-lg font-semibold">Backups</h3>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">{t("settings.backupsHint")}</p>
         <div className="space-y-4">
           {tasks.map((task) => (
-            <div key={task.id} className="grid gap-2 border-b border-[var(--color-line)] pb-4 last:border-0 last:pb-0 md:grid-cols-[1fr_auto_minmax(12rem,16rem)] md:items-center">
+            <div
+              key={task.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-line)] pb-4 last:border-0 last:pb-0"
+            >
               <span className="text-sm font-medium">{task.name}</span>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -243,131 +223,9 @@ export function SettingsPage({
                 />
                 {t("settings.taskEnabled")}
               </label>
-              <div>
-                <Label>{t("settings.composeBackupHook")}</Label>
-                <Select
-                  value={task.prefs?.compose_backup_hook === "on_success" ? "on_success" : "off"}
-                  onChange={(e) =>
-                    void updateTaskPrefs(task, { compose_backup_hook: e.target.value as ComposeBackupHook })
-                  }
-                >
-                  <option value="off">{t("settings.composeBackupHookOff")}</option>
-                  <option value="on_success">{t("settings.composeBackupHookOnSuccess")}</option>
-                </Select>
-              </div>
             </div>
           ))}
         </div>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-lg font-semibold">{t("settings.composeBackup")}</h3>
-        <p className="mb-4 text-sm text-[var(--color-muted)]">{t("settings.composeBackupHint")}</p>
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
-            <input
-              type="checkbox"
-              checked={settings.compose_backup_enabled ?? true}
-              onChange={(e) => setSettings({ ...settings, compose_backup_enabled: e.target.checked })}
-            />
-            {t("settings.composeBackupEnabled")}
-          </label>
-          <div>
-            <Label>{t("settings.composeBackupCron")}</Label>
-            <Input
-              value={settings.compose_backup_cron || "0 3 * * *"}
-              onChange={(e) => setSettings({ ...settings, compose_backup_cron: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>{t("settings.composeAppDataHostRoot")}</Label>
-            <Input
-              className="font-mono text-xs"
-              value={settings.compose_backup_appdata_host_root || ""}
-              placeholder={composeStatus?.appdata_host_root || "/DATA/AppData"}
-              onChange={(e) => setSettings({ ...settings, compose_backup_appdata_host_root: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>{t("settings.composeAppDataDir")}</Label>
-            <Input
-              className="font-mono text-xs"
-              value={settings.compose_backup_appdata_dir || ""}
-              placeholder={composeStatus?.appdata_dir || "/host/appdata"}
-              onChange={(e) => setSettings({ ...settings, compose_backup_appdata_dir: e.target.value })}
-            />
-          </div>
-        </div>
-        {composeStatus && (
-          <dl className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">Docker</dt>
-              <dd className="text-right">
-                {composeStatus.docker_available ? t("settings.composeDockerOk") : t("settings.composeDockerMissing")}
-                {!composeStatus.docker_available && composeStatus.docker_error ? (
-                  <div className="mt-1 font-mono text-xs text-[var(--color-err)]">{composeStatus.docker_error}</div>
-                ) : null}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">AppData</dt>
-              <dd className="truncate font-mono text-xs">
-                {composeStatus.appdata_dir}
-                {composeStatus.appdata_available ? "" : ` · ${t("settings.composeBackupMissing")}`}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">{t("settings.composeProjects")}</dt>
-              <dd>{composeStatus.project_count ?? 0}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-[var(--color-muted)]">{t("settings.composeBackupLast")}</dt>
-              <dd>
-                {composeStatus.last_ok_at ? (
-                  <>
-                    {formatTs(composeStatus.last_ok_at)}
-                    {` · OK ${composeStatus.last_ok_count ?? 0}`}
-                    {composeStatus.last_fail_count ? ` · Fail ${composeStatus.last_fail_count}` : ""}
-                  </>
-                ) : (
-                  "—"
-                )}
-              </dd>
-            </div>
-            {composeStatus.last_error &&
-            !(composeStatus.docker_available && /docker socket|docker ping/i.test(composeStatus.last_error)) ? (
-              <div className="text-[var(--color-err)]">{composeStatus.last_error}</div>
-            ) : null}
-          </dl>
-        )}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" onClick={() => void saveSettings()}>
-            {t("settings.save")}
-          </Button>
-          <SecondaryButton type="button" disabled={composeBusy} onClick={() => void runComposeBackup()}>
-            {t("settings.composeBackupRun")}
-          </SecondaryButton>
-        </div>
-        {composeStatus?.projects?.length ? (
-          <div className="mt-4">
-            <p className="mb-2 text-sm font-medium">{t("settings.composeProjects")}</p>
-            <ul className="space-y-1 font-mono text-xs text-[var(--color-muted)]">
-              {composeStatus.projects.slice(0, 12).map((p) => (
-                <li key={p.name + p.compose_host} className="break-all">
-                  {p.name} → AppData/{p.appdata_name}
-                  {p.compose_readable ? "" : " · compose?"}
-                  {p.appdata_writable ? "" : " · appdata?"}
-                  {!p.compose_readable && p.compose_host ? (
-                    <div className="pl-2 text-[10px] opacity-80">src: {p.compose_host}</div>
-                  ) : null}
-                  {!p.compose_readable && p.compose_local ? (
-                    <div className="pl-2 text-[10px] opacity-80">local: {p.compose_local}</div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
       </Card>
 
       <Card>

@@ -11,12 +11,18 @@ import (
 )
 
 var (
-	ErrAPIDown         = errors.New("zimaos api not reachable")
-	ErrTaskDisabled    = errors.New("backup task disabled in manager")
-	ErrAlreadyRunning  = errors.New("backup already running")
-	ErrTargetOffline   = errors.New("backup target not connected")
-	ErrStartInProgress = errors.New("start already in progress for this task")
+	ErrAPIDown             = errors.New("zimaos api not reachable")
+	ErrTaskDisabled        = errors.New("backup task disabled in manager")
+	ErrAlreadyRunning      = errors.New("backup already running")
+	ErrTargetOffline       = errors.New("backup target not connected")
+	ErrStartInProgress     = errors.New("start already in progress for this task")
+	ErrComposeBeforeFailed = errors.New("compose sync before backup failed")
 )
+
+// ComposeBeforeBackup syncs compose files into AppData before a ZimaOS backup starts.
+type ComposeBeforeBackup interface {
+	RunBeforeBackup(ctx context.Context, taskID, backupName string) error
+}
 
 type Service struct {
 	client  *zimaos.Client
@@ -24,6 +30,7 @@ type Service struct {
 	runs    *store.RunStore
 	prefs   *store.PrefsStore
 	audit   *store.AuditStore
+	compose ComposeBeforeBackup
 }
 
 func NewService(
@@ -32,8 +39,9 @@ func NewService(
 	runs *store.RunStore,
 	prefs *store.PrefsStore,
 	audit *store.AuditStore,
+	compose ComposeBeforeBackup,
 ) *Service {
-	return &Service{client: client, monitor: mon, runs: runs, prefs: prefs, audit: audit}
+	return &Service{client: client, monitor: mon, runs: runs, prefs: prefs, audit: audit, compose: compose}
 }
 
 func (s *Service) StartBackup(ctx context.Context, taskID string) (*store.BackupRun, string, error) {
@@ -66,6 +74,15 @@ func (s *Service) StartBackup(ctx context.Context, taskID string) (*store.Backup
 	}
 	if task.AnyTargetDisconnected() {
 		return nil, "", ErrTargetOffline
+	}
+
+	if prefs.ComposeBefore() && s.compose != nil {
+		if err := s.compose.RunBeforeBackup(ctx, taskID, task.Name); err != nil {
+			_ = s.audit.Add(ctx, "error", "compose_backup", "compose sync before backup failed", map[string]any{
+				"task_id": taskID, "error": err.Error(),
+			})
+			return nil, "", fmt.Errorf("%w: %v", ErrComposeBeforeFailed, err)
+		}
 	}
 
 	msg, err := s.client.StartTask(ctx, taskID)

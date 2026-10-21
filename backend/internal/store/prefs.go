@@ -9,7 +9,9 @@ import (
 
 const (
 	ComposeHookOff       = "off"
+	ComposeHookBefore    = "before"
 	ComposeHookOnSuccess = "on_success"
+	ComposeHookBoth      = "both"
 )
 
 type TaskPrefs struct {
@@ -23,16 +25,25 @@ type TaskPrefs struct {
 
 func NormalizeComposeHook(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case ComposeHookOnSuccess, "before", "after", "both", "on_complete", "success":
-		// Legacy before/after/both map to post-success sync into AppData.
+	case ComposeHookBefore:
+		return ComposeHookBefore
+	case ComposeHookBoth:
+		return ComposeHookBoth
+	case ComposeHookOnSuccess, "after", "success", "on_complete":
 		return ComposeHookOnSuccess
 	default:
 		return ComposeHookOff
 	}
 }
 
+func (p TaskPrefs) ComposeBefore() bool {
+	h := NormalizeComposeHook(p.ComposeBackupHook)
+	return h == ComposeHookBefore || h == ComposeHookBoth
+}
+
 func (p TaskPrefs) ComposeOnSuccess() bool {
-	return NormalizeComposeHook(p.ComposeBackupHook) == ComposeHookOnSuccess
+	h := NormalizeComposeHook(p.ComposeBackupHook)
+	return h == ComposeHookOnSuccess || h == ComposeHookBoth
 }
 
 type PrefsStore struct {
